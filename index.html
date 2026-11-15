@@ -113,10 +113,10 @@
 <div id="toast"></div>
 <div id="help" class="hide">
   <div class="kicker" style="color:var(--ink);margin-bottom:6px">Hand controls · hold your hand in front of the camera</div>
-  <div class="row"><b>🤏</b><span>Pinch, then spread or close<small>Make the screen bigger or smaller</small></span></div>
-  <div class="row"><b>👌</b><span>Double pinch<small>Touch thumb and index twice to pause or play</small></span></div>
+  <div class="row"><b>✌️</b><span>Two fingers up<small>Index + middle finger: pause or play</small></span></div>
+  <div class="row"><b>👌</b><span>Double pinch, then spread or close<small>Resize the screen · open your hand to confirm</small></span></div>
   <div class="row"><b>✊</b><span>Make a fist and move<small>Grab the screen and drag it anywhere</small></span></div>
-  <div class="row"><b>🖐</b><span>Show your open hand<small>Full view on / off</small></span></div>
+  <div class="row"><b>🖐</b><span>Hold your open hand<small>Fill the ring for full view (and back)</small></span></div>
 </div>
 <div id="fullIcons" class="hide">
   <button id="iSound" class="on" aria-label="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="w" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></button>
@@ -162,7 +162,7 @@
 import * as THREE from "three";
 import { MindARThree } from "./lib/mindar/mindar-image-three.prod.js";
 import { FilesetResolver, HandLandmarker } from "./lib/mediapipe/vision_bundle.js";
-import { Gestures } from "./gestures.js";
+import { Gestures, OPEN_HOLD } from "./gestures.js";
 
 const $ = (id) => document.getElementById(id);
 const film = $("film");
@@ -568,16 +568,29 @@ async function loadHands() {
   } catch (e) { console.warn("hand tracking off", e); hands = null; $("gest").classList.add("hide"); }
 }
 
+let zoomMode = false, ring = 0, ringPalm = null;
+function chipFor(pose) {
+  if (zoomMode) return gestChip("🔍", pose === "pinch" ? `Resize · ${zoomTarget.toFixed(1)}× · open hand to confirm` : "Zoom mode · pinch, then spread or close", true);
+  if (!pose) return gestChip("✋", "Show your hand to the camera");
+  const t = { pinch: ["🤏", "Pinch · double pinch to resize"], two: ["✌️", "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
+  gestChip(t[0], t[1], pose !== "none");
+}
+let lastPose = null;
 const gestures = new Gestures({
-  hand: (pose) => {
-    if (!pose) return gestChip("✋", "Show your hand to the camera");
-    gestChip({ pinch: "🤏", fist: "✊", open: "🖐", none: "✋" }[pose], { pinch: "Pinch · spread to resize", fist: "Grabbed · move to drag", open: "Open hand · hold for full view", none: "Hand found" }[pose], pose !== "none");
+  hand: (pose) => { lastPose = pose; chipFor(pose); },
+  zoomMode: (on) => {
+    zoomMode = on; zoomBase = zoomTarget;
+    if (on) { toast("🔍  Zoom mode"); buzz([15, 30, 15]); }
+    chipFor(lastPose);
   },
+  zoomConfirm: () => { toast(`✓  Size ${zoomTarget.toFixed(1)}×`); buzz([25, 40, 25]); },
   zoomStart: () => { zoomBase = zoomTarget; },
   zoom: (f) => {
+    if (!zoomMode && f !== 1) return;
     const z = Math.min(2.6, Math.max(0.45, zoomBase * f));
-    if (Math.abs(z - zoomTarget) > 0.01) { zoomTarget = z; toast(`${zoomTarget.toFixed(1)}×`); }
+    if (Math.abs(z - zoomTarget) > 0.01) { zoomTarget = z; chipFor(lastPose); }
   },
+  openProgress: (p, palm) => { ring = p; ringPalm = palm; if (p > 0 && Math.round(p * 10) % 3 === 0 && p < 1) buzz(6); },
   toggle: () => { if (film.paused) film.play().catch(() => {}); else film.pause(); toast(film.paused ? "❚❚  Paused" : "▶  Playing"); buzz([20, 40, 20]); },
   dragStart: () => { dragDir0 = screenDir.clone(); buzz(15); },
   drag: (dx, dy) => {
@@ -595,6 +608,7 @@ const gestures = new Gestures({
 });
 
 window.__arGesture = (name, ...args) => gestures.on[name] && gestures.on[name](...args);   // for automated tests
+window.__arDrawHand = (lm, p) => { hands = null; ring = p; ringPalm = lm[9]; drawHand(lm, mindar.video); };   // for automated tests
 function detectHands(now) {
   if (!hands || phase !== "play") return;
   const v = mindar.video;
@@ -613,16 +627,31 @@ function drawHand(lm, v) {
   if (handCanvas.width !== W * dpr || handCanvas.height !== H * dpr) { handCanvas.width = W * dpr; handCanvas.height = H * dpr; handCanvas.style.width = W + "px"; handCanvas.style.height = H + "px"; }
   hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   hctx.clearRect(0, 0, W, H);
-  if (!lm) return;
+  if (!lm) { ring = 0; return; }
   const r = v.getBoundingClientRect();
   const P = (p) => [r.left + p.x * r.width, r.top + p.y * r.height];
-  hctx.lineWidth = 2.5; hctx.strokeStyle = "rgba(227,179,62,0.85)"; hctx.lineCap = "round";
-  hctx.shadowColor = "rgba(227,179,62,0.8)"; hctx.shadowBlur = 8;
-  hctx.beginPath();
-  for (const [a, b] of BONES) { const A = P(lm[a]), B = P(lm[b]); hctx.moveTo(A[0], A[1]); hctx.lineTo(B[0], B[1]); }
-  hctx.stroke();
+  hctx.lineCap = "round"; hctx.lineJoin = "round";
+  const bones = () => { hctx.beginPath(); for (const [a, b] of BONES) { const A = P(lm[a]), B = P(lm[b]); hctx.moveTo(A[0], A[1]); hctx.lineTo(B[0], B[1]); } hctx.stroke(); };
+  hctx.lineWidth = 7; hctx.strokeStyle = "rgba(17,17,17,0.55)"; bones();                 // dark outline so it reads on any background
+  hctx.lineWidth = 4; hctx.strokeStyle = "#E3B33E"; hctx.shadowColor = "rgba(227,179,62,0.9)"; hctx.shadowBlur = 10; bones();
   hctx.shadowBlur = 0;
-  for (let i = 0; i < 21; i++) { const [x, y] = P(lm[i]); hctx.fillStyle = i === 4 || i === 8 ? "#E3B33E" : "#FFFBF1"; hctx.beginPath(); hctx.arc(x, y, i === 4 || i === 8 ? 5 : 3.2, 0, Math.PI * 2); hctx.fill(); }
+  for (let i = 0; i < 21; i++) {
+    const [x, y] = P(lm[i]); const big = i === 4 || i === 8 || i === 12;
+    hctx.fillStyle = "#111"; hctx.beginPath(); hctx.arc(x, y, big ? 7.5 : 5.5, 0, Math.PI * 2); hctx.fill();
+    hctx.fillStyle = big ? "#E3B33E" : "#FFFBF1"; hctx.beginPath(); hctx.arc(x, y, big ? 5.5 : 3.8, 0, Math.PI * 2); hctx.fill();
+  }
+  // full-view ring around the palm while an open hand is held
+  if (ring > 0 && ringPalm) {
+    const [cx, cy] = P(ringPalm);
+    const rad = Math.max(36, Math.hypot(P(lm[0])[0] - P(lm[9])[0], P(lm[0])[1] - P(lm[9])[1]) * 0.75);
+    hctx.lineWidth = 9; hctx.strokeStyle = "rgba(17,17,17,0.5)"; hctx.beginPath(); hctx.arc(cx, cy, rad, 0, Math.PI * 2); hctx.stroke();
+    hctx.lineWidth = 7; hctx.strokeStyle = "rgba(255,251,241,0.35)"; hctx.beginPath(); hctx.arc(cx, cy, rad, 0, Math.PI * 2); hctx.stroke();
+    hctx.strokeStyle = "#E3B33E"; hctx.shadowColor = "rgba(227,179,62,0.9)"; hctx.shadowBlur = 12;
+    hctx.beginPath(); hctx.arc(cx, cy, rad, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ring); hctx.stroke();
+    hctx.shadowBlur = 0;
+    hctx.fillStyle = "#fff"; hctx.font = "800 13px Poppins, sans-serif"; hctx.textAlign = "center";
+    hctx.fillText(immersive ? "BACK TO AR" : "FULL VIEW", cx, cy + rad + 22);
+  }
 }
 
 // full view: film fills the screen, only sound + vibration icons
