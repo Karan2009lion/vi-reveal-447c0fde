@@ -51,11 +51,14 @@
   @keyframes pulse { 50% { opacity: .3; } }
   #hint { position: fixed; z-index: 12; left: 0; right: 0; bottom: calc(110px + env(safe-area-inset-bottom)); text-align: center; color: #fff; font-size: 14px; font-weight: 600; text-shadow: 0 2px 10px rgba(0,0,0,.7); padding: 0 24px; transition: opacity .35s; }
   #hint.hide { opacity: 0; }
+  #arrow { font-size: 34px; line-height: 1; margin-bottom: 6px; animation: up 1.4s ease-in-out infinite; }
+  #arrow.hide { display: none; }
+  @keyframes up { 0% { transform: translateY(14px); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
 
   /* controls */
   #controls { position: fixed; z-index: 14; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 10px; padding: 8px; border-radius: 40px; background: rgba(17,17,17,.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity .35s; }
   #controls.hide { opacity: 0; pointer-events: none; }
-  #controls button { min-width: 48px; height: 44px; padding: 0 16px; border-radius: 30px; border: none; background: rgba(255,255,255,.12); color: #fff; font: 700 13px "Poppins", sans-serif; cursor: pointer; }
+  #controls button { min-width: 44px; height: 44px; padding: 0 13px; border-radius: 30px; border: none; background: rgba(255,255,255,.12); color: #fff; font: 700 13px "Poppins", sans-serif; cursor: pointer; }
   #controls button.on { background: var(--gold2); color: #111; }
 
   /* film on screen (when the page is out of view) */
@@ -75,14 +78,15 @@
 
 <div id="scan" class="hide"><div class="frame"><b></b><b></b><b></b><b></b><div class="line"></div></div></div>
 <div id="pill" class="hide"><span class="d"></span><span id="pillText">Scanning the cover…</span></div>
-<div id="hint" class="hide">Point your camera at the cover page</div>
+<div id="hint" class="hide"><div id="arrow" class="hide">↑</div><span id="hintText">Point your camera at the cover page</span></div>
 
-<div id="sticky"><div class="note">Point at the cover again to return to AR</div><video id="film" src="assets/film.mp4" playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video></div>
+<div id="sticky"><div class="note"></div><video id="film" src="assets/film.mp4" playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video></div>
 
 <div id="controls" class="hide">
   <button id="bPlay">Pause</button>
   <button id="bSound" class="on">Sound on</button>
   <button id="bAgain">Replay</button>
+  <button id="bCenter">Centre</button>
   <button id="bFull">Full screen</button>
 </div>
 
@@ -93,7 +97,7 @@
   <div class="word" style="margin-top:4px">IMPOSSIBLE</div>
   <div class="rowrule" style="margin-top:18px"><span class="pov">My POV,</span><i></i></div>
   <div class="word long gold" style="margin-top:4px">I-M-POSSIBLE</div>
-  <p class="lead">Point your camera at the cover page and watch it come alive. Turn your sound on.</p>
+  <p class="lead">Lay the cover page flat, hold your phone above it, then lift your phone and watch the page come alive. Turn your sound on.</p>
   <button class="btn" id="start"><span class="dot"></span>Start</button>
   <p class="small">Your camera is used only on this phone, to find the page. Nothing is recorded or uploaded.</p>
 </section>
@@ -114,23 +118,247 @@ import { MindARThree } from "./lib/mindar/mindar-image-three.prod.js";
 
 const $ = (id) => document.getElementById(id);
 const film = $("film");
-const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clamp01 = (t) => Math.min(1, Math.max(0, t));
-const seg = (t, a, b) => clamp01((t - a) / (b - a));
-
-let mindar = null;
-let state = "idle";        // idle → scanning → intro → playing
-let foundAt = -1;
-let visible = false;
-let introDone = false;
+const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOutBack = (t) => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
 
 function pill(text, ok = false) { $("pillText").textContent = text; $("pill").classList.toggle("ok", ok); $("pill").classList.remove("hide"); }
 function hidePill() { $("pill").classList.add("hide"); }
+function hint(text) { if (text) { $("hintText").textContent = text; $("hint").classList.remove("hide"); } else $("hint").classList.add("hide"); }
 
-// ── unlock audio + video on the first tap (iOS needs a user gesture)
+// ───────── device orientation → camera rotation (3DoF), so the page can stay in the air once it leaves the camera's view
+const qDev = new THREE.Quaternion();          // raw
+const qCam = new THREE.Quaternion();          // smoothed
+let haveOrientation = false;
+const _euler = new THREE.Euler(), _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)), _z = new THREE.Vector3(0, 0, 1);
+function onOrient(e) {
+  if (e.alpha == null && e.beta == null) return;
+  const a = THREE.MathUtils.degToRad(e.alpha || 0), b = THREE.MathUtils.degToRad(e.beta || 0), g = THREE.MathUtils.degToRad(e.gamma || 0);
+  const orient = THREE.MathUtils.degToRad((screen.orientation && screen.orientation.angle) || window.orientation || 0);
+  _euler.set(b, a, -g, "YXZ");
+  qDev.setFromEuler(_euler).multiply(_q1).multiply(_q0.setFromAxisAngle(_z, -orient));
+  if (!haveOrientation) { qCam.copy(qDev); haveOrientation = true; }
+}
+async function askOrientation() {
+  try {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      const r = await DeviceOrientationEvent.requestPermission();
+      if (r !== "granted") return;
+    }
+    window.addEventListener("deviceorientation", onOrient);
+  } catch (e) { /* no sensors: we fall back to a timed flight */ }
+}
+
+// ───────── unlock audio + video on the first tap (phones need a tap before sound)
 async function unlockFilm() {
   film.muted = false;
   try { await film.play(); film.pause(); film.currentTime = 0; } catch (e) { film.muted = true; $("bSound").classList.remove("on"); $("bSound").textContent = "Sound off"; }
+}
+
+// ───────── scene
+let mindar, anchor, world, cam, pageGroup, turnGroup, coverMesh, glowMesh, sweepMesh, filmGroup, filmMesh, frameMesh;
+const H = 1536 / 1024;                         // the page: 1 wide, 1.5 tall (target units)
+const FW = 1.5, FH = FW * 9 / 16;              // the film: the page's long side, landscape
+
+function buildScene() {
+  anchor = mindar.addAnchor(0);
+  world = new THREE.Scene();
+  cam = new THREE.PerspectiveCamera();
+  cam.matrixAutoUpdate = true;
+
+  pageGroup = new THREE.Group();               // world pose of the page (moves during the flight)
+  turnGroup = new THREE.Group();               // in-plane turn: portrait → landscape
+  pageGroup.add(turnGroup);
+  world.add(pageGroup);
+  pageGroup.visible = false;
+
+  const tex = new THREE.TextureLoader().load("./assets/cover.jpg");
+  tex.colorSpace = THREE.SRGBColorSpace;
+  coverMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, H), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, side: THREE.DoubleSide }));
+  coverMesh.renderOrder = 2;
+  glowMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.1, H + 0.1), new THREE.MeshBasicMaterial({ color: 0xe3b33e, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+  glowMesh.position.z = -0.01; glowMesh.renderOrder = 1;
+  sweepMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.02), new THREE.MeshBasicMaterial({ color: 0xe3b33e, transparent: true, opacity: 0, depthWrite: false }));
+  sweepMesh.position.z = 0.01; sweepMesh.renderOrder = 3;
+  turnGroup.add(glowMesh, coverMesh, sweepMesh);
+
+  // film: counter-turned so it is upright once the page has turned landscape
+  filmGroup = new THREE.Group();
+  filmGroup.rotation.z = Math.PI / 2;
+  const vtex = new THREE.VideoTexture(film);
+  vtex.colorSpace = THREE.SRGBColorSpace;
+  frameMesh = new THREE.Mesh(new THREE.PlaneGeometry(FW + 0.06, FH + 0.06), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0, side: THREE.DoubleSide }));
+  frameMesh.position.z = 0.012; frameMesh.renderOrder = 4;
+  filmMesh = new THREE.Mesh(new THREE.PlaneGeometry(FW, FH), new THREE.MeshBasicMaterial({ map: vtex, transparent: true, opacity: 0, toneMapped: false }));
+  filmMesh.position.z = 0.02; filmMesh.renderOrder = 5;
+  filmGroup.add(frameMesh, filmMesh);
+  turnGroup.add(filmGroup);
+
+  anchor.onTargetFound = () => { tracking = true; if (phase === "scan") { phase = "found"; tFound = now(); } };
+  anchor.onTargetLost = () => { tracking = false; };
+}
+
+// ───────── flight state
+let phase = "idle";        // idle → scan → found → fly → land → play
+let tracking = false;
+let tFound = 0, tLand = 0, tFallback = 0;
+let prog = 0;              // 0 = on the table, 1 = in the air in front of you
+let elev0 = null;          // camera elevation when the flight started
+const P0 = new THREE.Vector3(), Q0 = new THREE.Quaternion();   // page pose (world) on the table
+const P1 = new THREE.Vector3(), Q1 = new THREE.Quaternion();   // screen pose in the air
+let S1 = 1, dist0 = 1;
+const now = () => performance.now() / 1000;
+const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _f = new THREE.Vector3();
+
+function camForward(out) { return out.set(0, 0, -1).applyQuaternion(qCam); }
+
+// page pose in the world = camera rotation × page pose seen by the camera
+function samplePagePose() {
+  _m.copy(anchor.group.matrix);                // camera space (camera sits at the origin)
+  _m.decompose(_p, _q, _s);
+  const k = _s.x || 1;                         // MindAR scale: target units → camera units
+  _p.applyQuaternion(qCam);
+  _q.premultiply(qCam);
+  if (!sampled) { P0.copy(_p); Q0.copy(_q); pageScale = k; sampled = true; }
+  else { P0.lerp(_p, 0.35); Q0.slerp(_q, 0.35); pageScale += (k - pageScale) * 0.35; }
+}
+let sampled = false, pageScale = 1;
+
+// where the page flies to: straight ahead at eye level, facing you, a bit bigger
+function planFlight() {
+  dist0 = P0.length();
+  const fwd = new THREE.Vector3(P0.x, 0, P0.z);
+  if (fwd.lengthSq() < 1e-6) camForward(fwd).setY(0);
+  fwd.normalize();
+  const D = Math.max(dist0 * 1.05, 0.0001);
+  P1.copy(fwd).multiplyScalar(D).add(new THREE.Vector3(0, -0.04 * D, 0));
+  // face the camera, world-up, then turn 90° in-plane so the portrait page lies landscape
+  const z = P1.clone().negate().normalize();
+  const x = new THREE.Vector3(0, 1, 0).cross(z).normalize();
+  const y = z.clone().cross(x);
+  Q1.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  // final width: just inside the screen's width (a bit bigger than the page was)
+  const tanH = 1 / (mindar.camera.projectionMatrix.elements[0] || 1);   // tan(horizontal fov / 2)
+  const portrait = window.innerHeight >= window.innerWidth;
+  const W = 2 * D * tanH * (portrait ? 0.92 : 0.78);
+  S1 = W / (FW * pageScale);
+}
+
+function setPose(t) {
+  const e = easeIO(clamp01(t));
+  _p.copy(P0).lerp(P1, e);
+  _p.y += Math.sin(Math.PI * e) * 0.22 * dist0;              // arc up through the air
+  pageGroup.position.copy(_p);
+  pageGroup.quaternion.copy(Q0).slerp(Q1, e);
+  const grow = t < 1 ? 1 + (S1 - 1) * e : S1;
+  pageGroup.scale.setScalar(pageScale * grow);
+  turnGroup.rotation.z = -Math.PI / 2 * clamp01((t - 0.15) / 0.75);  // portrait → landscape while flying
+}
+
+function tick() {
+  const t = now();
+  // smooth the sensor rotation
+  if (haveOrientation) qCam.slerp(qDev, 0.35);
+  cam.quaternion.copy(qCam);
+  cam.projectionMatrix.copy(mindar.camera.projectionMatrix);
+  cam.projectionMatrixInverse.copy(mindar.camera.projectionMatrixInverse);
+
+  if (phase === "found" || (phase === "scan" && tracking)) {
+    if (tracking) samplePagePose();
+    if (!sampled) return;
+    pageGroup.visible = true;
+    pageGroup.position.copy(P0); pageGroup.quaternion.copy(Q0); pageGroup.scale.setScalar(pageScale);
+    turnGroup.rotation.z = 0;
+    const a = t - tFound;
+    coverMesh.material.opacity = clamp01(a / 0.5);
+    glowMesh.material.opacity = 0.5 * clamp01(a / 0.5);
+    const sw = clamp01((a - 0.05) / 0.9);
+    sweepMesh.material.opacity = sw > 0 && sw < 1 ? 0.95 : 0;
+    sweepMesh.position.y = H / 2 - sw * H;
+    if (a > 1.0 && !tick.said) {
+      tick.said = true;
+      $("scan").classList.add("hide");
+      pill("Initialisation done ✓", true);
+      hint("Now slowly lift your phone up to eye level");
+      $("arrow").classList.remove("hide");
+      elev0 = Math.asin(camForward(_f).y);
+      planFlight();
+      tFallback = t;
+    }
+    if (tick.said) {
+      // start flying once the user starts lifting, or after a few seconds without motion sensors
+      const elev = Math.asin(camForward(_f).y);
+      const lifting = haveOrientation && elev - elev0 > THREE.MathUtils.degToRad(6);
+      if (lifting || (!haveOrientation && t - tFallback > 1.6) || (!tracking && haveOrientation)) {
+        planFlight();
+        phase = "fly";
+        if (!haveOrientation) tFallback = t;
+      }
+    }
+    return;
+  }
+
+  if (phase === "fly") {
+    let target;
+    if (haveOrientation) {
+      // the page follows your lift: looking down = on the table, eye level = in the air
+      const elev = Math.asin(camForward(_f).y);
+      const goal = Math.atan2(P1.y, Math.hypot(P1.x, P1.z));
+      target = clamp01((elev - elev0) / (goal - elev0 || -1e-3));
+      if (target > 0.82) target = 1;                       // close enough: finish on its own
+      prog = Math.max(prog, prog + (target - prog) * 0.08);  // smooth, never goes back down
+      if (target === 1) prog = Math.min(1, prog + 0.012);
+    } else {
+      prog = clamp01((t - tFallback) / 2.6);
+    }
+    setPose(prog);
+    glowMesh.material.opacity = 0.5 * (1 - prog * 0.6);
+    sweepMesh.material.opacity = 0;
+    if (prog > 0.15) { hint("Keep going…"); }
+    if (prog >= 0.999) {
+      phase = "land"; tLand = t;
+      hint(null); $("arrow").classList.add("hide"); hidePill();
+      film.currentTime = 0; film.play().catch(() => {});
+      try { mindar.controller.stopProcessVideo(); } catch (e) {}
+    }
+    return;
+  }
+
+  if (phase === "land") {
+    // a little "pop" to a bit bigger, then the page becomes the film
+    const a = t - tLand;
+    const pop = easeOutBack(clamp01(a / 0.7));
+    pageGroup.scale.setScalar(pageScale * S1 * (0.94 + 0.06 * pop));
+    const swap = clamp01((a - 0.15) / 0.6);
+    coverMesh.material.opacity = 1 - swap;
+    glowMesh.material.opacity = 0.2 * (1 - swap);
+    filmMesh.material.opacity = swap;
+    frameMesh.material.opacity = swap * 0.9;
+    if (a > 0.8) {
+      phase = "play";
+      coverMesh.visible = glowMesh.visible = sweepMesh.visible = false;
+      filmMesh.material.transparent = false; filmMesh.material.opacity = 1; filmMesh.material.needsUpdate = true;
+      $("controls").classList.remove("hide");
+      pill("Turn your phone sideways for a bigger view", true);
+      setTimeout(hidePill, 4500);
+    }
+  }
+}
+
+// put the screen back straight ahead of wherever the phone is pointing
+function recenter() {
+  if (phase !== "play") return;
+  const fwd = camForward(new THREE.Vector3()).setY(0);
+  if (fwd.lengthSq() < 1e-6) return;
+  fwd.normalize();
+  const D = P1.length();
+  P1.copy(fwd).multiplyScalar(D).add(new THREE.Vector3(0, -0.04 * D, 0));
+  const z = P1.clone().negate().normalize();
+  const x = new THREE.Vector3(0, 1, 0).cross(z).normalize();
+  const y = z.clone().cross(x);
+  Q1.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  pageGroup.position.copy(P1);
+  pageGroup.quaternion.copy(Q1);
 }
 
 async function startAR() {
@@ -153,125 +381,35 @@ async function startAR() {
     $("fail").classList.remove("hide");
     return;
   }
-  state = "scanning";
+  phase = "scan";
   $("scan").classList.remove("hide");
-  $("hint").classList.remove("hide");
+  hint("Hold your phone above the cover and point down at it");
   pill("Scanning the cover…");
-  const { renderer, scene, camera } = mindar;
-  renderer.setAnimationLoop(() => { tick(); renderer.render(scene, camera); });
+  const { renderer } = mindar;
+  renderer.setAnimationLoop(() => { tick(); renderer.render(world, cam); });
 }
 
-// ── 3D: the cover sits exactly on the printed page, lifts, turns landscape and becomes the film
-let stage, coverMesh, glowMesh, sweepMesh, filmMesh, frameMesh;
-function buildScene() {
-  const anchor = mindar.addAnchor(0);
-  stage = new THREE.Group();
-  anchor.group.add(stage);
-  const H = 1536 / 1024;                       // target is 1 unit wide, 1.5 tall
-
-  const tex = new THREE.TextureLoader().load("./assets/cover.jpg");
-  tex.colorSpace = THREE.SRGBColorSpace;
-  coverMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, H), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0 }));
-  glowMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.08, H + 0.08), new THREE.MeshBasicMaterial({ color: 0xe3b33e, transparent: true, opacity: 0 }));
-  glowMesh.position.z = -0.002;
-  sweepMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.02), new THREE.MeshBasicMaterial({ color: 0xe3b33e, transparent: true, opacity: 0 }));
-  sweepMesh.position.z = 0.003;
-  stage.add(glowMesh, coverMesh, sweepMesh);
-
-  const vtex = new THREE.VideoTexture(film);
-  vtex.colorSpace = THREE.SRGBColorSpace;
-  const FW = 1.5, FH = 1.5 * 9 / 16;           // the film takes the page's long side once it turns landscape
-  frameMesh = new THREE.Mesh(new THREE.PlaneGeometry(FW + 0.05, FH + 0.05), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0 }));
-  frameMesh.position.z = 0.004;
-  filmMesh = new THREE.Mesh(new THREE.PlaneGeometry(FW, FH), new THREE.MeshBasicMaterial({ map: vtex, transparent: true, opacity: 0, toneMapped: false }));
-  filmMesh.position.z = 0.01;
-  filmMesh.renderOrder = 3; frameMesh.renderOrder = 2; coverMesh.renderOrder = 1;
-  stage.add(frameMesh, filmMesh);
-
-  anchor.onTargetFound = () => {
-    visible = true;
-    if (foundAt < 0) { foundAt = performance.now() / 1000; state = "intro"; }
-    $("scan").classList.add("hide");
-    $("hint").classList.add("hide");
-    $("sticky").classList.remove("show");
-    if (introDone) { pill("Tracking the page", true); setTimeout(hidePill, 1200); }
-  };
-  anchor.onTargetLost = () => {
-    visible = false;
-    if (introDone) {
-      // keep the film going on screen until the page is found again
-      $("sticky").classList.add("show");
-    } else if (state === "intro") {
-      pill("Hold steady — point at the cover");
-    }
-  };
-}
-
-function tick() {
-  if (foundAt < 0 || !stage) return;
-  const t = performance.now() / 1000 - foundAt;
-
-  if (!introDone) {
-    // 0.0–0.7  the page lights up exactly where it is printed; a gold line scans it
-    const appear = ease(seg(t, 0, 0.5));
-    coverMesh.material.opacity = appear;
-    glowMesh.material.opacity = 0.55 * appear * (1 - seg(t, 1.6, 2.4));
-    const sw = seg(t, 0.05, 1.0);
-    sweepMesh.material.opacity = sw > 0 && sw < 1 ? 0.95 : 0;
-    sweepMesh.position.y = 0.75 - sw * 1.5;
-    if (t > 1.0 && state === "intro" && !tick.said) { tick.said = true; pill("Initialisation done ✓  Hold your screen above the page", true); }
-
-    // 1.2–2.0  lift above the page, towards the centre
-    const lift = ease(seg(t, 1.2, 2.0));
-    // 2.0–3.0  turn into landscape
-    const turn = ease(seg(t, 2.0, 3.0));
-    // 2.8–3.5  the page becomes the film
-    const swap = ease(seg(t, 2.8, 3.5));
-    stage.position.z = 0.18 * lift;
-    stage.rotation.z = -Math.PI / 2 * turn;
-    const sc = 1 - 0.1 * lift + 0.1 * turn;
-    stage.scale.setScalar(sc);
-    coverMesh.material.opacity = appear * (1 - swap);
-    filmMesh.material.opacity = swap;
-    frameMesh.material.opacity = swap * 0.9;
-
-    if (t >= 2.8 && film.paused && !tick.started) { tick.started = true; film.currentTime = 0; film.play().catch(() => {}); }
-    if (t >= 3.5) {
-      introDone = true;
-      coverMesh.visible = false; glowMesh.visible = false; sweepMesh.visible = false;
-      filmMesh.material.transparent = false; filmMesh.material.opacity = 1; filmMesh.material.needsUpdate = true;
-      frameMesh.material.transparent = false; frameMesh.material.needsUpdate = true;
-      state = "playing";
-      setTimeout(() => pill("Turn your phone sideways ⟳ for the full view", true), 1400);
-      setTimeout(hidePill, 6000);
-      $("controls").classList.remove("hide");
-      if (!visible) $("sticky").classList.add("show");
-    }
-  }
-}
-
-// ── controls
-$("bPlay").onclick = () => { if (film.paused) { film.play(); } else { film.pause(); } };
+// ───────── controls
+$("bPlay").onclick = () => { if (film.paused) film.play(); else film.pause(); };
 film.addEventListener("play", () => ($("bPlay").textContent = "Pause"));
 film.addEventListener("pause", () => ($("bPlay").textContent = "Play"));
-film.addEventListener("ended", () => ($("bPlay").textContent = "Play"));
 $("bSound").onclick = () => { film.muted = !film.muted; $("bSound").classList.toggle("on", !film.muted); $("bSound").textContent = film.muted ? "Sound off" : "Sound on"; };
 $("bAgain").onclick = () => { film.currentTime = 0; film.play(); };
+$("bCenter").onclick = recenter;
 $("bFull").onclick = () => {
   $("sticky").classList.add("show");
-  const v = film;
-  if (v.requestFullscreen) v.requestFullscreen().then(() => screen.orientation?.lock?.("landscape").catch(() => {})).catch(() => {});
-  else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+  if (film.requestFullscreen) film.requestFullscreen().then(() => screen.orientation?.lock?.("landscape").catch(() => {})).catch(() => {});
+  else if (film.webkitEnterFullscreen) film.webkitEnterFullscreen();
 };
-document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && visible) $("sticky").classList.remove("show"); });
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) $("sticky").classList.remove("show"); });
+film.addEventListener("webkitendfullscreen", () => $("sticky").classList.remove("show"));
 
-$("start").onclick = async () => { await unlockFilm(); startAR(); };
-$("retry").onclick = async () => { await unlockFilm(); location.reload(); };
+$("start").onclick = async () => { await askOrientation(); await unlockFilm(); startAR(); };
+$("retry").onclick = async () => { location.reload(); };
 $("watch").onclick = async () => {
   await unlockFilm();
   $("fail").classList.add("hide");
   $("sticky").classList.add("show");
-  $("sticky").querySelector(".note").textContent = "";
   $("controls").classList.remove("hide");
   film.play().catch(() => {});
 };
