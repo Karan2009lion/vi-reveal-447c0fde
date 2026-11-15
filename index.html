@@ -29,6 +29,7 @@
   .btn { margin-top: 26px; align-self: flex-start; display: inline-flex; align-items: center; gap: 12px; padding: 16px 26px; border-radius: 40px; border: none; background: var(--ink); color: #fff; font: 700 15px "Poppins", sans-serif; letter-spacing: .3px; cursor: pointer; }
   .btn .dot { width: 9px; height: 9px; border-radius: 9px; background: var(--gold2); box-shadow: 0 0 0 4px rgba(227,179,62,.25); }
   .btn.ghost { background: transparent; color: var(--ink); border: 2px solid var(--ink); padding: 12px 22px; }
+  .chip { font-size: 11px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; padding: 6px 12px; border-radius: 30px; border: 1.5px solid var(--gold); color: var(--gold); }
   .small { font-size: 11.5px; color: var(--mute); margin-top: 16px; line-height: 1.5; max-width: 420px; }
 
   /* scanning frame */
@@ -56,9 +57,9 @@
   @keyframes up { 0% { transform: translateY(14px); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
 
   /* controls */
-  #controls { position: fixed; z-index: 14; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 10px; padding: 8px; border-radius: 40px; background: rgba(17,17,17,.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity .35s; }
+  #controls { position: fixed; z-index: 14; left: 50%; max-width: calc(100vw - 16px); flex-wrap: nowrap; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 10px; padding: 8px; border-radius: 40px; background: rgba(17,17,17,.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity .35s; }
   #controls.hide { opacity: 0; pointer-events: none; }
-  #controls button { min-width: 44px; height: 44px; padding: 0 13px; border-radius: 30px; border: none; background: rgba(255,255,255,.12); color: #fff; font: 700 13px "Poppins", sans-serif; cursor: pointer; }
+  #controls button { min-width: 44px; height: 44px; padding: 0 11px; font-size: 12px !important; border-radius: 30px; border: none; background: rgba(255,255,255,.12); color: #fff; font: 700 13px "Poppins", sans-serif; cursor: pointer; }
   #controls button.on { background: var(--gold2); color: #111; }
 
   /* film on screen (when the page is out of view) */
@@ -84,10 +85,11 @@
 
 <div id="controls" class="hide">
   <button id="bPlay">Pause</button>
-  <button id="bSound" class="on">Sound on</button>
+  <button id="bSound" class="on">Sound</button>
+  <button id="bVibe" class="on">Vibe</button>
   <button id="bAgain">Replay</button>
   <button id="bCenter">Centre</button>
-  <button id="bFull">Full screen</button>
+  <button id="bFull">Full</button>
 </div>
 
 <!-- intro -->
@@ -98,6 +100,10 @@
   <div class="rowrule" style="margin-top:18px"><span class="pov">My POV,</span><i></i></div>
   <div class="word long gold" style="margin-top:4px">I-M-POSSIBLE</div>
   <p class="lead">Lay the cover page flat, hold your phone above it, then lift your phone and watch the page come alive. Turn your sound on.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+    <span class="chip">3D sound</span><span class="chip">Vibration</span><span class="chip">Ambient score</span>
+  </div>
+  <p class="small" style="margin-top:8px">Only in this AR experience. Headphones recommended.</p>
   <button class="btn" id="start"><span class="dot"></span>Start</button>
   <p class="small">Your camera is used only on this phone, to find the page. Nothing is recorded or uploaded.</p>
 </section>
@@ -152,7 +158,111 @@ async function askOrientation() {
 // ───────── unlock audio + video on the first tap (phones need a tap before sound)
 async function unlockFilm() {
   film.muted = false;
-  try { await film.play(); film.pause(); film.currentTime = 0; } catch (e) { film.muted = true; $("bSound").classList.remove("on"); $("bSound").textContent = "Sound off"; }
+  try { await film.play(); film.pause(); film.currentTime = 0; } catch (e) { film.muted = true; $("bSound").classList.remove("on"); $("bSound").textContent = "Muted"; }
+}
+
+// ───────── AR-only extras: ambient score, 3D (spatial) film sound, vibration
+let actx = null, master = null, room = null, ambient = null, ambientGain = null, panner = null, spatial = false;
+const buffers = {};
+let hapticsOn = true, cues = [], cueIdx = 0, lastFilmT = 0;
+const canVibrate = typeof navigator.vibrate === "function";
+let iosHaptic = null;
+if (!canVibrate) {           // iPhone (Safari 18+): toggling a hidden switch gives a light tap
+  const lab = document.createElement("label"); const inp = document.createElement("input");
+  inp.type = "checkbox"; inp.setAttribute("switch", ""); lab.appendChild(inp);
+  lab.style.cssText = "position:fixed;left:-9999px;opacity:0"; document.body.appendChild(lab); iosHaptic = lab;
+}
+function buzz(p) {
+  if (!hapticsOn) return;
+  try {
+    if (canVibrate) navigator.vibrate(p);
+    else if (iosHaptic) {
+      iosHaptic.click();
+      if (Array.isArray(p) && p.length > 2) setTimeout(() => iosHaptic.click(), p[0] + p[1]);
+    }
+  } catch (e) {}
+}
+function makeIR(ctx, secs) {
+  const n = Math.floor(ctx.sampleRate * secs), b = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); }
+  return b;
+}
+async function loadBuf(name) {
+  try { const r = await fetch(`./assets/${name}.m4a`); buffers[name] = await actx.decodeAudioData(await r.arrayBuffer()); } catch (e) {}
+}
+function sfx(name, gain = 1) {
+  if (!actx || !buffers[name]) return;
+  const s = actx.createBufferSource(); s.buffer = buffers[name];
+  const g = actx.createGain(); g.gain.value = gain;
+  s.connect(g); g.connect(master); g.connect(room); s.start();
+}
+async function initAudio() {
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = "playback";   // iPhone: play even on silent mode
+    const AC = window.AudioContext || window.webkitAudioContext;
+    actx = new AC();
+    await actx.resume();
+    master = actx.createGain(); master.connect(actx.destination);
+    const conv = actx.createConvolver(); conv.buffer = makeIR(actx, 2.4);
+    room = actx.createGain(); room.gain.value = 0.16; room.connect(conv); conv.connect(master);
+    if (actx.state === "running") {
+      // the film's sound comes from where the screen floats: turn the phone and it moves around you
+      const src = actx.createMediaElementSource(film);
+      panner = actx.createPanner();
+      panner.panningModel = "HRTF"; panner.distanceModel = "inverse"; panner.refDistance = 1; panner.rolloffFactor = 0;
+      const pg = actx.createGain(); pg.gain.value = 0.85;
+      const dg = actx.createGain(); dg.gain.value = 0.3;
+      src.connect(panner); panner.connect(pg); pg.connect(master);
+      src.connect(dg); dg.connect(master);
+      src.connect(room);
+      spatial = true;
+    }
+    Promise.all(["ambient", "sfx_found", "sfx_tick", "sfx_land"].map(loadBuf)).then(() => { if (wantAmbient) startAmbient(); });
+    fetch("./assets/haptics.json").then((r) => r.json()).then((j) => (cues = j)).catch(() => {});
+  } catch (e) { console.warn("audio extras off", e); }
+}
+let wantAmbient = false;
+function startAmbient() {
+  wantAmbient = true;
+  if (!actx || !buffers.ambient || ambient) return;
+  ambient = actx.createBufferSource(); ambient.buffer = buffers.ambient; ambient.loop = true;
+  ambient.loopStart = 0.05; ambient.loopEnd = buffers.ambient.duration - 0.05;
+  ambientGain = actx.createGain(); ambientGain.gain.setValueAtTime(0, actx.currentTime);
+  ambientGain.gain.linearRampToValueAtTime(0.55, actx.currentTime + 2.5);
+  ambient.connect(ambientGain); ambientGain.connect(master); ambientGain.connect(room);
+  ambient.start();
+}
+function stopAmbient(secs = 2.5) {
+  wantAmbient = false;
+  if (!ambient) return;
+  const t = actx.currentTime;
+  ambientGain.gain.cancelScheduledValues(t); ambientGain.gain.setValueAtTime(ambientGain.gain.value, t);
+  ambientGain.gain.linearRampToValueAtTime(0, t + secs);
+  const a = ambient; setTimeout(() => { try { a.stop(); } catch (e) {} }, secs * 1000 + 100); ambient = null;
+}
+const _lf = new THREE.Vector3(), _lu = new THREE.Vector3(), _wp = new THREE.Vector3();
+function updateListener() {
+  if (!spatial || !actx) return;
+  _lf.set(0, 0, -1).applyQuaternion(qCam); _lu.set(0, 1, 0).applyQuaternion(qCam);
+  const L = actx.listener;
+  if (L.forwardX) { L.forwardX.value = _lf.x; L.forwardY.value = _lf.y; L.forwardZ.value = _lf.z; L.upX.value = _lu.x; L.upY.value = _lu.y; L.upZ.value = _lu.z; }
+  else if (L.setOrientation) L.setOrientation(_lf.x, _lf.y, _lf.z, _lu.x, _lu.y, _lu.z);
+  pageGroup.getWorldPosition(_wp); if (_wp.lengthSq() < 1e-9) _wp.set(0, 0, -1);
+  _wp.normalize().multiplyScalar(2);
+  if (panner.positionX) { panner.positionX.value = _wp.x; panner.positionY.value = _wp.y; panner.positionZ.value = _wp.z; }
+  else panner.setPosition(_wp.x, _wp.y, _wp.z);
+}
+window.__arDebug = () => ({ audio: actx && actx.state, spatial, bufs: Object.keys(buffers), cues: cues.length, ambient: !!ambient, phase, prog: +prog.toFixed(2) });
+function filmHaptics() {
+  if (!cues.length || film.paused) return;
+  const t = film.currentTime;
+  if (t < lastFilmT - 0.5) cueIdx = cues.findIndex((c) => c[0] >= t);   // replay / seek
+  if (cueIdx < 0) cueIdx = cues.length;
+  while (cueIdx < cues.length && cues[cueIdx][0] <= t) {
+    if (t - cues[cueIdx][0] < 0.25) buzz(cues[cueIdx][1]);
+    cueIdx++;
+  }
+  lastFilmT = t;
 }
 
 // ───────── scene
@@ -240,7 +350,7 @@ function planFlight() {
   // final width: just inside the screen's width (a bit bigger than the page was)
   const tanH = 1 / (mindar.camera.projectionMatrix.elements[0] || 1);   // tan(horizontal fov / 2)
   const portrait = window.innerHeight >= window.innerWidth;
-  const W = 2 * D * tanH * (portrait ? 0.92 : 0.78);
+  const W = 2 * D * tanH * (portrait ? 1.22 : 0.98);
   S1 = W / (FW * pageScale);
 }
 
@@ -262,6 +372,8 @@ function tick() {
   cam.quaternion.copy(qCam);
   cam.projectionMatrix.copy(mindar.camera.projectionMatrix);
   cam.projectionMatrixInverse.copy(mindar.camera.projectionMatrixInverse);
+  updateListener();
+  if (phase === "play" || phase === "land") filmHaptics();
 
   if (phase === "found" || (phase === "scan" && tracking)) {
     if (tracking) samplePagePose();
@@ -279,6 +391,7 @@ function tick() {
       tick.said = true;
       $("scan").classList.add("hide");
       pill("Initialisation done ✓", true);
+      sfx("sfx_found", 0.9); buzz([25, 60, 25]);
       hint("Now slowly lift your phone up to eye level");
       $("arrow").classList.remove("hide");
       elev0 = Math.asin(camForward(_f).y);
@@ -315,10 +428,14 @@ function tick() {
     glowMesh.material.opacity = 0.5 * (1 - prog * 0.6);
     sweepMesh.material.opacity = 0;
     if (prog > 0.15) { hint("Keep going…"); }
+    const step = Math.floor(prog * 5);                     // a tick + tap at each fifth of the way
+    if (step > (tick.step ?? 0) && step < 5) { tick.step = step; sfx("sfx_tick", 0.5 + 0.12 * step); buzz(8 + step * 6); }
     if (prog >= 0.999) {
       phase = "land"; tLand = t;
       hint(null); $("arrow").classList.add("hide"); hidePill();
       film.currentTime = 0; film.play().catch(() => {});
+      sfx("sfx_land", 1); buzz([90, 50, 140]); stopAmbient(2.5);
+      cueIdx = 0; lastFilmT = 0;
       try { mindar.controller.stopProcessVideo(); } catch (e) {}
     }
     return;
@@ -382,6 +499,7 @@ async function startAR() {
     return;
   }
   phase = "scan";
+  startAmbient();
   $("scan").classList.remove("hide");
   hint("Hold your phone above the cover and point down at it");
   pill("Scanning the cover…");
@@ -393,7 +511,13 @@ async function startAR() {
 $("bPlay").onclick = () => { if (film.paused) film.play(); else film.pause(); };
 film.addEventListener("play", () => ($("bPlay").textContent = "Pause"));
 film.addEventListener("pause", () => ($("bPlay").textContent = "Play"));
-$("bSound").onclick = () => { film.muted = !film.muted; $("bSound").classList.toggle("on", !film.muted); $("bSound").textContent = film.muted ? "Sound off" : "Sound on"; };
+let soundOn = true;
+$("bSound").onclick = () => {
+  soundOn = !soundOn;
+  if (master) master.gain.value = soundOn ? 1 : 0; else film.muted = !soundOn;
+  $("bSound").classList.toggle("on", soundOn); $("bSound").textContent = soundOn ? "Sound" : "Muted";
+};
+$("bVibe").onclick = () => { hapticsOn = !hapticsOn; $("bVibe").classList.toggle("on", hapticsOn); $("bVibe").textContent = hapticsOn ? "Vibe" : "No vibe"; if (hapticsOn) buzz(30); };
 $("bAgain").onclick = () => { film.currentTime = 0; film.play(); };
 $("bCenter").onclick = recenter;
 $("bFull").onclick = () => {
@@ -404,7 +528,7 @@ $("bFull").onclick = () => {
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) $("sticky").classList.remove("show"); });
 film.addEventListener("webkitendfullscreen", () => $("sticky").classList.remove("show"));
 
-$("start").onclick = async () => { await askOrientation(); await unlockFilm(); startAR(); };
+$("start").onclick = async () => { await askOrientation(); await initAudio(); await unlockFilm(); startAR(); };
 $("retry").onclick = async () => { location.reload(); };
 $("watch").onclick = async () => {
   await unlockFilm();
