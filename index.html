@@ -95,6 +95,23 @@
   #help .row span small { display: block; font-size: 11px; color: var(--mute); font-weight: 500; }
   /* thumbs up: clean view, every pop-up hidden */
   body.clean #help, body.clean #gest, body.clean #controls, body.clean #pill, body.clean #hint, body.clean #fullIcons { opacity: 0 !important; pointer-events: none !important; }
+
+  /* closing card, after the film ends */
+  #thanks { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .6s ease; }
+  #thanks.show { opacity: 1; pointer-events: auto; }
+  #thanks .card { position: relative; width: min(360px, 100%); max-height: calc(100% - 8px); overflow-y: auto; padding: 26px 24px 22px; border-radius: 24px; background: var(--bg); color: var(--ink); box-shadow: 0 0 0 1.5px rgba(227,179,62,.55), 0 24px 60px rgba(0,0,0,.45), 0 0 80px rgba(227,179,62,.25); transform: translateY(40px) scale(.94); transition: transform .8s cubic-bezier(.2,1.3,.4,1); }
+  #thanks.show .card { transform: none; }
+  #thanks .ty { font-family: "Noto Serif Display", serif; font-stretch: 62.5%; font-weight: 800; font-size: 64px; line-height: .95; margin-top: 12px; letter-spacing: -.5px; }
+  #thanks .sub { font-size: 13px; font-weight: 600; color: var(--ink2); margin-top: 8px; }
+  #thanks hr { border: none; height: 2px; background: var(--ink); margin: 20px 0 16px; }
+  #thanks .name { font-family: "Noto Serif Display", serif; font-weight: 500; font-size: 26px; line-height: 1.15; }
+  #thanks .org { font-size: 12px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; color: var(--gold); margin-top: 4px; }
+  #thanks .links { margin-top: 14px; display: flex; flex-direction: column; }
+  #thanks .links a { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 6px 0; border-top: 1px solid #EADFC4; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+  #thanks .links a svg { flex: none; width: 20px; height: 20px; color: var(--gold); }
+  #thanks .acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  #thanks .acts .btn { margin-top: 0; padding: 14px 20px; font-size: 14px; text-decoration: none; }
+  #thanks .acts .btn.ghost { padding: 12px 18px; }
 </style>
 <script type="importmap">
 { "imports": { "three": "./lib/three/three.module.js", "three/addons/": "./lib/three/addons/" } }
@@ -133,6 +150,26 @@
   <button id="bAgain">Replay</button>
   <button id="bCenter">Centre</button>
   <button id="bFull">Full</button>
+</div>
+
+<!-- closing card -->
+<div id="thanks" aria-hidden="true">
+  <div class="card" role="dialog" aria-label="Thank you">
+    <div class="kicker" style="color:var(--ink)">Impossible → <span class="gold">I-M-Possible</span></div>
+    <div class="ty">Thank you<span class="gold">.</span></div>
+    <p class="sub">for watching, and for seeing what's possible.</p>
+    <hr>
+    <div class="name">Karan Gowda N</div>
+    <div class="org">Vertex Interactive</div>
+    <div class="links">
+      <a href="mailto:karangowda2547@gmail.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>karangowda2547@gmail.com</a>
+      <a href="https://www.vertexinteractive.in" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>www.vertexinteractive.in</a>
+    </div>
+    <div class="acts">
+      <a class="btn" id="saveContact" href="assets/contact.vcf" target="_blank" rel="noopener"><span class="dot"></span>Save contact</a>
+      <button class="btn ghost" id="watchAgain">Watch again</button>
+    </div>
+  </div>
 </div>
 
 <!-- intro -->
@@ -519,7 +556,48 @@ function tick() {
       setTimeout(hidePill, 4500);
     }
   }
+
+  if (phase === "end") {
+    // the screen shrinks back and fades in the air, then the thank-you card rises
+    const e = easeIO(clamp01((t - tEnd) / 0.9));
+    pageGroup.scale.setScalar(pageScale * S1 * zoom * (1 - 0.55 * e));
+    filmMesh.material.opacity = frameMesh.material.opacity = 1 - e;
+    if (e >= 1) pageGroup.visible = false;
+  }
 }
+
+// ───────── closing card when the film ends
+let tEnd = 0;
+function showThanks() {
+  const inAR = phase === "play";
+  if (immersive) setImmersive(false);
+  if (inAR) {
+    phase = "end"; tEnd = now();
+    filmMesh.material.transparent = true; frameMesh.material.transparent = true;
+    filmMesh.material.needsUpdate = true;
+  }
+  hctx.clearRect(0, 0, handCanvas.width, handCanvas.height); ring = 0;
+  for (const id of ["controls", "help", "gest", "pill", "hint"]) $(id).classList.add("hide");
+  $("sticky").classList.remove("show");
+  buzz([40, 60, 40, 60, 120]);
+  setTimeout(() => { $("thanks").classList.add("show"); $("thanks").setAttribute("aria-hidden", "false"); }, inAR ? 700 : 150);
+}
+function watchAgain() {
+  $("thanks").classList.remove("show"); $("thanks").setAttribute("aria-hidden", "true");
+  if (phase === "end") {
+    phase = "play";
+    pageGroup.visible = true;
+    filmMesh.material.opacity = 1; frameMesh.material.opacity = 0.9;
+    filmMesh.material.transparent = false; filmMesh.material.needsUpdate = true;
+    if (hands) gestChip("✋", "Show your hand to the camera");
+  } else $("sticky").classList.add("show");
+  $("controls").classList.remove("hide");
+  cueIdx = 0; lastFilmT = 0;
+  film.currentTime = 0; film.play().catch(() => {});
+}
+film.addEventListener("ended", showThanks);
+$("watchAgain").onclick = watchAgain;
+window.__arEnd = () => { film.currentTime = Math.max(0, film.duration - 1.5); };   // for automated tests
 
 // ───────── the floating screen: where it is, how big, moved by hand gestures
 const screenDir = new THREE.Vector3(0, 0, -1), screenPos = new THREE.Vector3(), screenQ = new THREE.Quaternion();
