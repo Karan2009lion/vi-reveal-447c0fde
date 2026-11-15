@@ -84,6 +84,7 @@
   #gest { position: fixed; z-index: 14; left: calc(14px + env(safe-area-inset-left)); bottom: calc(92px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 30px; background: rgba(17,17,17,.7); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .3px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: opacity .3s; }
   #gest.hide { opacity: 0; }
   #gest .i { font-size: 16px; }
+  @media (orientation: landscape) { #gest { bottom: auto; top: calc(14px + env(safe-area-inset-top)); } }
   #gest.live { box-shadow: 0 0 0 2px var(--gold2); }
   #toast { position: fixed; z-index: 33; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.92); padding: 14px 24px; border-radius: 18px; background: rgba(17,17,17,.78); color: #fff; font-size: 18px; font-weight: 800; letter-spacing: .3px; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; white-space: nowrap; }
   #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -224,6 +225,7 @@ import { FilesetResolver, HandLandmarker } from "./lib/mediapipe/vision_bundle.j
 import { Gestures, OPEN_HOLD } from "./gestures.js";
 import { CSS3DRenderer, CSS3DObject } from "three/addons/renderers/CSS3DRenderer.js";
 import { makeAura } from "./aura.js";
+import { makeFinale } from "./finale.js";
 
 const $ = (id) => document.getElementById(id);
 const film = $("film");
@@ -619,7 +621,9 @@ function watchAgain() {
 film.addEventListener("ended", showThanks);
 
 // ───────── the PDF as a book in AR: every page animates, two-finger swipes turn the pages
-let aura = null, cssR = null, cssScene = null, bookObj = null, bookFrame = null, bookReady = false, bookPage = 0, bookN = 20, bookFrom = "end";
+const _v3 = new THREE.Vector3();
+let ppuK = 1, bookFrameN = 0, bookFitT = 0;
+let finale = null, bookFit = 0, aura = null, cssR = null, cssScene = null, bookObj = null, bookFrame = null, bookReady = false, bookPage = 0, bookN = 20, bookFrom = "end";
 function makeFrame() {
   const f = document.createElement("iframe");
   f.src = "book.html"; f.width = 1100; f.height = 1400; f.title = "Impossible to I-M-Possible";
@@ -635,6 +639,8 @@ function initBook() {
   bookFrame = makeFrame();
   bookObj = new CSS3DObject(bookFrame); bookObj.visible = false; cssScene.add(bookObj);
   aura = makeAura(THREE); world.add(aura.group);
+  finale = makeFinale(CSS3DObject, { email: "karangowda2547@gmail.com", site: "https://www.vertexinteractive.in", siteLabel: "www.vertexinteractive.in", vcf: "assets/contact.vcf" });
+  bookObj.add(finale.left, finale.right);
   window.addEventListener("resize", () => cssR.setSize(window.innerWidth, window.innerHeight));
 }
 let lastClinkT = 0;
@@ -642,6 +648,12 @@ window.addEventListener("message", (e) => {
   if (!bookFrame || e.source !== bookFrame.contentWindow) return;
   const m = e.data || {};
   if (m.type === "ready") { bookReady = true; bookN = m.n; }
+  if (m.type === "page" && finale) {
+    // the last page: Point One floats in on the left, the founder card on the right
+    const last = m.i === m.n - 1;
+    if (last && !finale.on) { finale.show(true); buzz([20, 40, 20, 40, 60]); if (window.innerHeight > window.innerWidth) { pill("Turn your phone sideways to see everything", true); setTimeout(() => { if (phase === "book") hidePill(); }, 4000); } }
+    if (!last && finale.on) finale.show(false);
+  }
   if (m.type === "page") { bookPage = m.i; if (performance.now() >= turnReadyAt) bookPos = m.i; bookN = m.n; $("bkNum").textContent = `${m.i + 1} / ${m.n}`; $("bkPrev").disabled = m.i === 0; $("bkNext").textContent = m.i === m.n - 1 ? "Done" : "Next ›"; }
   if (m.type === "turn") buzz([10, 30, 10]);
   if (m.type === "kind" && aura) aura.set(m.kind);
@@ -712,7 +724,7 @@ function openBook() {
     zoomTarget = zoom = 1; zoomBase = 1;
     bookObj.visible = true;
   }
-  bookPos = 0; turnReadyAt = 0;
+  bookPos = 0; turnReadyAt = 0; bookFit = 0;
   const begin = () => bookFrame.contentWindow.postMessage({ cmd: "go", i: 0, restart: true }, "*");
   if (bookReady) begin(); else { const iv = setInterval(() => { if (bookReady) { clearInterval(iv); begin(); } }, 100); }
   for (const id of ["controls", "sticky"]) $(id).classList.remove("show");
@@ -728,6 +740,7 @@ function closeBook() {
   $("bookBar").classList.add("hide"); $("gest").classList.add("hide"); hint(null); hidePill();
   if (bookObj) { bookObj.visible = false; cssR.render(cssScene, cam); }
   if (aura) { aura.set(null); aura.group.visible = false; }
+  if (finale) { finale.show(false); finale.left.visible = finale.right.visible = false; if (cssR) cssR.render(cssScene, cam); }
   $("bookFlat").classList.remove("show");
   hctx.clearRect(0, 0, handCanvas.width, handCanvas.height); ring = 0;
   phase = bookFrom === "end" ? "end" : bookFrom;
@@ -773,8 +786,24 @@ function updateScreen() {
     screenPos.lerp(screenDir.clone().multiplyScalar(screenD), 0.22);
     faceCamera(screenPos, screenQ);
     const pm = mindar.camera.projectionMatrix.elements, d = screenPos.length() || 1;
-    const fit = Math.min(0.72 * (2 * d / pm[5]) / 1152, 0.84 * (2 * d / pm[0]) / 768);   // leaves room around the page for its animation
+    // leaves room around the page for its animation; on the last page it zooms out to fit Point One and the founder card beside it
+    const fin = finale && finale.on, wide = fin ? finale.WIDE : 768, room = fin ? 0.94 : 0.84;
+    // screen pixels per world unit at the book, exactly as the 3D page layer draws it (perspective by depth)
+    const depth = Math.max(1e-3, -_v3.copy(screenPos).applyMatrix4(cam.matrixWorldInverse).z) || d;
+    let ppu = (pm[5] * window.innerHeight / 2) / depth;
+    // calibrate against how big the book really appears on this phone (browsers' 3D layers differ a little)
+    if (bookObj.visible && (bookFrameN++ % 12) === 0) {
+      const w = bookFrame.getBoundingClientRect().width, predicted = 1100 * bookObj.scale.x * ppu;
+      if (w > 20 && predicted > 1e-6) ppuK += (Math.min(2, Math.max(0.5, w / predicted)) - ppuK) * 0.5;
+    }
+    ppu *= ppuK;
+    const target = Math.min((fin ? 0.64 : 0.72) * window.innerHeight / (1152 * ppu), room * window.innerWidth / (wide * ppu));
+    const nowT = performance.now(), fdt = Math.min(0.25, (nowT - (bookFitT || nowT)) / 1000); bookFitT = nowT;
+    bookFit = bookFit > 0 ? bookFit + (target - bookFit) * (1 - Math.exp(-fdt * 5)) : target;   // settles in about half a second
+    window.__fit = { target, bookFit, ppuK };
+    const fit = bookFit;
     bookObj.position.copy(screenPos); bookObj.quaternion.copy(screenQ); bookObj.scale.setScalar(fit * zoom);
+    if (finale) finale.left.visible = finale.right.visible = bookObj.visible;
     if (aura) { aura.group.visible = true; aura.group.position.copy(screenPos); aura.group.quaternion.copy(screenQ); aura.group.scale.setScalar(fit * zoom); aura.update(fit * zoom); }
     return;
   }
@@ -869,7 +898,8 @@ const gestures = new Gestures({
   open: () => { if (phase === "book") return; setImmersive(!immersive); buzz([30, 30, 30]); },
 });
 
-window.__arHands = (lm, t) => gestures.update(lm, t);   // for automated tests: feed hand landmarks
+window.__arHands = (lm, t) => gestures.update(lm, t);
+window.__arGestState = () => ({ pose: gestures.pose, lastSwipe: gestures.lastSwipe, trail: gestures.trail.length, zoomMode, turnReadyIn: Math.round(turnReadyAt - performance.now()), bookPos });   // for automated tests: feed hand landmarks
 window.__arGesture = (name, ...args) => gestures.on[name] && gestures.on[name](...args);   // for automated tests
 window.__arDrawHand = (lm, p) => { hands = null; ring = p; ringPalm = lm[9]; drawHand(lm, mindar.video); };   // for automated tests
 function detectHands(now) {
