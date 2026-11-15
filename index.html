@@ -113,7 +113,21 @@
   #thanks .acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
   #thanks .acts .btn { margin-top: 0; padding: 14px 20px; font-size: 14px; text-decoration: none; }
   #thanks .acts .btn.ghost { padding: 12px 18px; }
-  #thanks .read { margin-top: 12px; width: 100%; justify-content: center; background: var(--gold2); color: #111; }
+  /* phone sideways: info on the left, every button on the right, nothing to scroll */
+  @media (orientation: landscape) and (max-height: 560px) {
+    #thanks .card { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0 26px; align-items: center; width: min(780px, 100%); padding: 18px 24px; }
+    #thanks .ty { font-size: 46px; margin-top: 8px; }
+    #thanks hr { margin: 12px 0 10px; }
+    #thanks .name { font-size: 22px; }
+    #thanks .links { margin-top: 8px; }
+    #thanks .links a { min-height: 40px; }
+    #thanks .c2 .acts { flex-direction: column; gap: 8px; margin-top: 0; }
+    #thanks .c2 .btn { width: 100%; justify-content: center; margin-top: 8px; padding-top: 12px; padding-bottom: 12px; }
+    #thanks .c2 .acts .btn { margin-top: 0; }
+  }
+  #thanks .mail { margin-top: 14px; width: 100%; justify-content: center; text-decoration: none; }
+  #thanks .mail svg { width: 20px; height: 20px; }
+  #thanks .read { margin-top: 10px; width: 100%; justify-content: center; background: var(--gold2); color: #111; }
   #thanks .read .dot { background: #111; box-shadow: 0 0 0 4px rgba(17,17,17,.15); }
 
   /* the PDF as a book in AR */
@@ -174,6 +188,7 @@
 <!-- closing card -->
 <div id="thanks" aria-hidden="true">
   <div class="card" role="dialog" aria-label="Thank you">
+    <div class="c1">
     <div class="kicker" style="color:var(--ink)">Impossible → <span class="gold">I-M-Possible</span></div>
     <div class="ty">Thank you<span class="gold">.</span></div>
     <p class="sub">for watching, and for seeing what's possible.</p>
@@ -184,11 +199,15 @@
       <a href="mailto:karangowda2547@gmail.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>karangowda2547@gmail.com</a>
       <a href="https://www.vertexinteractive.in" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>www.vertexinteractive.in</a>
     </div>
+    </div>
+    <div class="c2">
     <div class="acts">
       <a class="btn" id="saveContact" href="assets/contact.vcf" target="_blank" rel="noopener"><span class="dot"></span>Save contact</a>
       <button class="btn ghost" id="watchAgain">Watch again</button>
     </div>
+    <a class="btn mail" id="mailKaran" href="mailto:karangowda2547@gmail.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Email Karan</a>
     <button class="btn read" id="readBook"><span class="dot"></span>Read the PDF in AR</button>
+    </div>
   </div>
 </div>
 
@@ -620,6 +639,11 @@ function watchAgain() {
 }
 film.addEventListener("ended", showThanks);
 
+// "Email Karan": opens the phone's mail app with the address, a subject and a short starter message
+const MAILTO = "mailto:karangowda2547@gmail.com?subject=" + encodeURIComponent("Hello from the summit · Vertex Interactive") +
+  "&body=" + encodeURIComponent("Hi Karan,\n\nI saw \"Impossible to I-M-Possible\" and I'd like to talk about Vertex Interactive.\n\nName:\nCompany:\nBest way to reach me:\n\nThanks!");
+$("mailKaran").href = MAILTO;
+
 // ───────── the PDF as a book in AR: every page animates, two-finger swipes turn the pages
 const _v3 = new THREE.Vector3();
 let ppuK = 1, bookFrameN = 0, bookFitT = 0;
@@ -639,7 +663,7 @@ function initBook() {
   bookFrame = makeFrame();
   bookObj = new CSS3DObject(bookFrame); bookObj.visible = false; cssScene.add(bookObj);
   aura = makeAura(THREE); world.add(aura.group);
-  finale = makeFinale(CSS3DObject, { email: "karangowda2547@gmail.com", site: "https://www.vertexinteractive.in", siteLabel: "www.vertexinteractive.in", vcf: "assets/contact.vcf" });
+  finale = makeFinale(CSS3DObject, { email: "karangowda2547@gmail.com", site: "https://www.vertexinteractive.in", siteLabel: "www.vertexinteractive.in", vcf: "assets/contact.vcf", mailto: MAILTO });
   bookObj.add(finale.left, finale.right);
   window.addEventListener("resize", () => cssR.setSize(window.innerWidth, window.innerHeight));
 }

@@ -25,6 +25,8 @@ const CSS = `
 #finMe a.row { display: flex; align-items: center; gap: 14px; min-height: 56px; border-top: 1.5px solid #EADFC4; color: #111; text-decoration: none; font-size: 19px; font-weight: 600; overflow-wrap: anywhere; }
 #finMe a.row:first-of-type { margin-top: 14px; }
 #finMe a.row svg { flex: none; width: 26px; height: 26px; color: #B47F12; }
+#finMe a.mail { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 18px; height: 66px; border-radius: 40px; background: #E3B33E; color: #111; font-size: 21px; font-weight: 800; text-decoration: none; box-shadow: 0 10px 24px rgba(180,127,18,.35); }
+#finMe a.mail svg { width: 26px; height: 26px; }
 #finMe a.save { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; height: 62px; border-radius: 40px; background: #111; color: #fff; font-size: 19px; font-weight: 700; text-decoration: none; }
 #finMe a.save i { width: 11px; height: 11px; border-radius: 11px; background: #E3B33E; box-shadow: 0 0 0 5px rgba(227,179,62,.25); }
 
@@ -96,7 +98,7 @@ const P1_SVG = `<svg viewBox="0 0 300 300" width="400" height="400" aria-hidden=
 
 const LINES = ["Hi! I'm Point One 👋", "Intelligence. Locally.", "Thanks for reading!", "Everyone said impossible…", "…we said I-M-Possible.", "Say hi to Karan →"];
 
-export function makeFinale(CSS3DObject, { email, site, siteLabel, vcf }) {
+export function makeFinale(CSS3DObject, { email, site, siteLabel, vcf, mailto }) {
   if (!document.getElementById("finCSS")) { const st = document.createElement("style"); st.id = "finCSS"; st.textContent = CSS; document.head.appendChild(st); }
 
   const me = document.createElement("div"); me.className = "fin"; me.id = "finMe"; me.style.setProperty("--from", "80px");
@@ -109,6 +111,7 @@ export function makeFinale(CSS3DObject, { email, site, siteLabel, vcf }) {
     <div class="co serif">Vertex Interactive<small>Building India's AI future</small></div>
     <a class="row" href="mailto:${email}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>${email}</a>
     <a class="row" href="${site}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>${siteLabel}</a>
+    <a class="mail" href="${mailto}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Email Karan</a>
     <a class="save" href="${vcf}" target="_blank" rel="noopener"><i></i>Save contact</a>
   </div></div>`;
 
