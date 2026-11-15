@@ -698,9 +698,9 @@ function openBook() {
   if (bookReady) begin(); else { const iv = setInterval(() => { if (bookReady) { clearInterval(iv); begin(); } }, 100); }
   for (const id of ["controls", "sticky"]) $(id).classList.remove("show");
   $("controls").classList.add("hide"); $("bookBar").classList.remove("hide");
-  hint(null); pill("✌ Swipe two fingers left: next page · right: back", true);
+  hint(null); pill("☝️ Point your finger and move it right for the next page", true);
   setTimeout(() => { if (phase === "book") hidePill(); }, 6000);
-  if (hands) gestChip("✌️", "Two fingers · swipe left: next · right: back");
+  if (hands) gestChip("☝️", "Point and move right: next page · left: back");
   startBookMusic();
   buzz([20, 40, 20]);
 }
@@ -800,7 +800,7 @@ let zoomMode = false, ring = 0, ringPalm = null;
 function chipFor(pose) {
   if (zoomMode) return gestChip("🔍", pose === "pinch" ? `Resize · ${zoomTarget.toFixed(1)}× · open hand to confirm` : "Zoom mode · pinch, then spread or close", true);
   if (!pose) return gestChip("✋", "Show your hand to the camera");
-  const t = { thumb: ["👍", "Thumbs up · hide / show info"], pinch: ["🤏", "Pinch · double pinch to resize"], two: ["✌️", phase === "book" ? "Two fingers · swipe left: next · right: back" : "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
+  const t = { thumb: ["👍", "Thumbs up · hide / show info"], pinch: phase === "book" && !zoomMode ? ["☝️", "Move right: next page · left: back"] : ["🤏", "Pinch · double pinch to resize"], two: ["✌️", phase === "book" ? "Move right: next page · left: back" : "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
   gestChip(t[0], t[1], pose !== "none");
 }
 let lastPose = null;
@@ -826,7 +826,7 @@ const gestures = new Gestures({
     if (!clean && !immersive) showHelp();
   },
   openProgress: (p, palm) => { if (phase === "book") { ring = 0; return; } ring = p; ringPalm = palm; if (p > 0 && Math.round(p * 10) % 3 === 0 && p < 1) buzz(6); },
-  swipe: (dir) => { if (phase !== "book") return; bookGo(dir === "left" ? "next" : "prev"); },
+  swipe: (dir) => { if (phase !== "book" || zoomMode) return; bookGo(dir === "right" ? "next" : "prev"); toast(dir === "right" ? "Next page ›" : "‹ Back"); },
   toggle: () => { if (phase === "book") return; if (film.paused) film.play().catch(() => {}); else film.pause(); toast(film.paused ? "❚❚  Paused" : "▶  Playing"); buzz([20, 40, 20]); },
   dragStart: () => { dragDir0 = screenDir.clone(); buzz(15); },
   drag: (dx, dy) => {
@@ -843,6 +843,7 @@ const gestures = new Gestures({
   open: () => { if (phase === "book") return; setImmersive(!immersive); buzz([30, 30, 30]); },
 });
 
+window.__arHands = (lm, t) => gestures.update(lm, t);   // for automated tests: feed hand landmarks
 window.__arGesture = (name, ...args) => gestures.on[name] && gestures.on[name](...args);   // for automated tests
 window.__arDrawHand = (lm, p) => { hands = null; ring = p; ringPalm = lm[9]; drawHand(lm, mindar.video); };   // for automated tests
 function detectHands(now) {
