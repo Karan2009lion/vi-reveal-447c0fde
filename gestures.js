@@ -10,13 +10,11 @@
 //   ✊ fist, then move ........................... drag the screen
 //   🖐 open hand, held until the ring fills ...... full view on / off
 //   👍 thumbs up, held briefly .................... hide / show all pop-ups
-//   🤙 pinky alone, held briefly .................. skip the film to its end (for testing)
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const OPEN_HOLD = 1.2;    // seconds to fill the full-view ring
 export const TWO_HOLD = 0.3;     // seconds two fingers must be shown to pause / play
 export const THUMB_HOLD = 0.4;   // seconds a thumbs up must be held to hide / show pop-ups
-export const PINKY_HOLD = 0.5;   // seconds the pinky must be shown to skip the film
 export const SWIPE = 0.10;       // how far (fraction of the camera image) the fingertip moves to count as a swipe
 export const SWIPE_TIME = 0.7;   // … within this many seconds
 export const SWIPE_GAP = 1.0;    // seconds to wait after a swipe before the next one counts
@@ -32,7 +30,6 @@ export function features(lm) {
   const thumbUp = folded && lm[4].y < lm[5].y - 0.35 * s && lm[4].y < lm[3].y && dist(lm[4], lm[5]) / s > 0.6;
   let pose = "none";
   if (thumbUp) pose = "thumb";
-  else if (pinky && !index && !middle) pose = "pinky";
   else if (index && middle && ring && pinky && thumb && pinch > 0.55) pose = "open";
   else if (index && middle && !ring && !pinky) pose = "two";
   else if (!middle && !ring && !pinky && indexOut) pose = "pinch";
@@ -127,8 +124,6 @@ export class Gestures {
       if (!this.fired && t - this.since >= TWO_HOLD && t - this.lastToggle > 0.8) {
         this.fired = true; this.lastToggle = t; this.on.toggle?.();
       }
-    } else if (this.pose === "pinky") {
-      if (!this.fired && t - this.since >= PINKY_HOLD) { this.fired = true; this.on.pinky?.(); }
     } else if (this.pose === "thumb") {
       if (!this.fired && t - this.since >= THUMB_HOLD) { this.fired = true; this.on.thumbsUp?.(); }
     } else if (this.pose === "open" && !this.fired) {

@@ -850,7 +850,7 @@ let zoomMode = false, ring = 0, ringPalm = null;
 function chipFor(pose) {
   if (zoomMode) return gestChip("🔍", pose === "pinch" ? `Resize · ${zoomTarget.toFixed(1)}× · open hand to confirm` : "Zoom mode · pinch, then spread or close", true);
   if (!pose) return gestChip("✋", "Show your hand to the camera");
-  const t = { pinky: ["🤙", "Pinky · skip to the end"], thumb: ["👍", "Thumbs up · hide / show info"], pinch: phase === "book" && !zoomMode ? ["☝️", "Move left: next page · right: back"] : ["🤏", "Pinch · double pinch to resize"], two: ["✌️", phase === "book" ? "Move left: next page · right: back" : "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
+  const t = { thumb: ["👍", "Thumbs up · hide / show info"], pinch: phase === "book" && !zoomMode ? ["☝️", "Move left: next page · right: back"] : ["🤏", "Pinch · double pinch to resize"], two: ["✌️", phase === "book" ? "Move left: next page · right: back" : "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
   gestChip(t[0], t[1], pose !== "none");
 }
 let lastPose = null;
@@ -876,11 +876,6 @@ const gestures = new Gestures({
     if (!clean && !immersive) showHelp();
   },
   openProgress: (p, palm) => { if (phase === "book") { ring = 0; return; } ring = p; ringPalm = palm; if (p > 0 && Math.round(p * 10) % 3 === 0 && p < 1) buzz(6); },
-  pinky: () => {   // testing shortcut: jump to the last second of the film
-    if (phase !== "play" || !film.duration) return;
-    film.currentTime = Math.max(0, film.duration - 1.2); film.play().catch(() => {});
-    toast("⏭  Skipped to the end"); buzz([20, 30, 20]);
-  },
   swipe: (dir) => { if (phase !== "book" || zoomMode) return; const go = dir === "left" ? "next" : "prev"; if (bookGo(go)) toast(go === "next" ? "Next page ›" : "‹ Back"); },
   toggle: () => { if (phase === "book") return; if (film.paused) film.play().catch(() => {}); else film.pause(); toast(film.paused ? "❚❚  Paused" : "▶  Playing"); buzz([20, 40, 20]); },
   dragStart: () => { dragDir0 = screenDir.clone(); buzz(15); },
