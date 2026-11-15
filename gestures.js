@@ -8,10 +8,12 @@
 //        open hand ............................... confirm the size, leave zoom mode
 //   ✊ fist, then move ........................... drag the screen
 //   🖐 open hand, held until the ring fills ...... full view on / off
+//   👍 thumbs up, held briefly .................... hide / show all pop-ups
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const OPEN_HOLD = 1.2;    // seconds to fill the full-view ring
 export const TWO_HOLD = 0.3;     // seconds two fingers must be shown to pause / play
+export const THUMB_HOLD = 0.4;   // seconds a thumbs up must be held to hide / show pop-ups
 
 export function features(lm) {
   const s = dist(lm[0], lm[9]) || 1e-3;                        // hand size: wrist → middle knuckle
@@ -20,17 +22,20 @@ export function features(lm) {
   const thumb = dist(lm[4], lm[9]) > dist(lm[3], lm[9]) * 1.04 && dist(lm[4], lm[5]) / s > 0.45;
   const indexOut = dist(lm[8], lm[0]) > dist(lm[5], lm[0]) * 1.2;  // index reaches out past its knuckle
   const pinch = dist(lm[4], lm[8]) / s;
+  const folded = !index && !middle && !ring && !pinky;
+  const thumbUp = folded && lm[4].y < lm[5].y - 0.35 * s && lm[4].y < lm[3].y && dist(lm[4], lm[5]) / s > 0.6;
   let pose = "none";
-  if (index && middle && ring && pinky && thumb && pinch > 0.55) pose = "open";
+  if (thumbUp) pose = "thumb";
+  else if (index && middle && ring && pinky && thumb && pinch > 0.55) pose = "open";
   else if (index && middle && !ring && !pinky) pose = "two";
   else if (!middle && !ring && !pinky && indexOut) pose = "pinch";
-  else if (!index && !middle && !ring && !pinky && !indexOut) pose = "fist";
+  else if (folded && !indexOut) pose = "fist";
   return { pose, pinch, s, palm: { x: lm[9].x, y: lm[9].y } };
 }
 
 export class Gestures {
   /** on: { hand(pose|null), zoomMode(on), zoomStart(), zoom(factor), zoomConfirm(), toggle(),
-   *        dragStart(), drag(dx, dy), dragEnd(), openProgress(p, palm), open() } */
+   *        dragStart(), drag(dx, dy), dragEnd(), openProgress(p, palm), open(), thumbsUp() } */
   constructor(on) {
     this.on = on;
     this.pose = "none";
@@ -91,6 +96,8 @@ export class Gestures {
       if (!this.fired && t - this.since >= TWO_HOLD && t - this.lastToggle > 0.8) {
         this.fired = true; this.lastToggle = t; this.on.toggle?.();
       }
+    } else if (this.pose === "thumb") {
+      if (!this.fired && t - this.since >= THUMB_HOLD) { this.fired = true; this.on.thumbsUp?.(); }
     } else if (this.pose === "open" && !this.fired) {
       const p = Math.min(1, (t - this.since) / OPEN_HOLD);
       this.on.openProgress?.(p, f.palm);

@@ -93,6 +93,8 @@
   #help .row:first-of-type { border-top: none; }
   #help .row b { font-size: 19px; text-align: center; }
   #help .row span small { display: block; font-size: 11px; color: var(--mute); font-weight: 500; }
+  /* thumbs up: clean view, every pop-up hidden */
+  body.clean #help, body.clean #gest, body.clean #controls, body.clean #pill, body.clean #hint, body.clean #fullIcons { opacity: 0 !important; pointer-events: none !important; }
 </style>
 <script type="importmap">
 { "imports": { "three": "./lib/three/three.module.js", "three/addons/": "./lib/three/addons/" } }
@@ -117,6 +119,7 @@
   <div class="row"><b>👌</b><span>Double pinch, then spread or close<small>Resize the screen · open your hand to confirm</small></span></div>
   <div class="row"><b>✊</b><span>Make a fist and move<small>Grab the screen and drag it anywhere</small></span></div>
   <div class="row"><b>🖐</b><span>Hold your open hand<small>Fill the ring for full view (and back)</small></span></div>
+  <div class="row"><b>👍</b><span>Thumbs up<small>Hide all pop-ups · again to bring them back</small></span></div>
 </div>
 <div id="fullIcons" class="hide">
   <button id="iSound" class="on" aria-label="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="w" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></button>
@@ -572,7 +575,7 @@ let zoomMode = false, ring = 0, ringPalm = null;
 function chipFor(pose) {
   if (zoomMode) return gestChip("🔍", pose === "pinch" ? `Resize · ${zoomTarget.toFixed(1)}× · open hand to confirm` : "Zoom mode · pinch, then spread or close", true);
   if (!pose) return gestChip("✋", "Show your hand to the camera");
-  const t = { pinch: ["🤏", "Pinch · double pinch to resize"], two: ["✌️", "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
+  const t = { thumb: ["👍", "Thumbs up · hide / show info"], pinch: ["🤏", "Pinch · double pinch to resize"], two: ["✌️", "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
   gestChip(t[0], t[1], pose !== "none");
 }
 let lastPose = null;
@@ -589,6 +592,13 @@ const gestures = new Gestures({
     if (!zoomMode && f !== 1) return;
     const z = Math.min(2.6, Math.max(0.45, zoomBase * f));
     if (Math.abs(z - zoomTarget) > 0.01) { zoomTarget = z; chipFor(lastPose); }
+  },
+  thumbsUp: () => {
+    const clean = !document.body.classList.contains("clean");
+    document.body.classList.toggle("clean", clean);
+    toast(clean ? "👍  Clean view" : "👍  Info on");
+    buzz([20, 30, 20]);
+    if (!clean && !immersive) showHelp();
   },
   openProgress: (p, palm) => { ring = p; ringPalm = palm; if (p > 0 && Math.round(p * 10) % 3 === 0 && p < 1) buzz(6); },
   toggle: () => { if (film.paused) film.play().catch(() => {}); else film.pause(); toast(film.paused ? "❚❚  Paused" : "▶  Playing"); buzz([20, 40, 20]); },
@@ -631,14 +641,13 @@ function drawHand(lm, v) {
   const r = v.getBoundingClientRect();
   const P = (p) => [r.left + p.x * r.width, r.top + p.y * r.height];
   hctx.lineCap = "round"; hctx.lineJoin = "round";
-  const bones = () => { hctx.beginPath(); for (const [a, b] of BONES) { const A = P(lm[a]), B = P(lm[b]); hctx.moveTo(A[0], A[1]); hctx.lineTo(B[0], B[1]); } hctx.stroke(); };
-  hctx.lineWidth = 7; hctx.strokeStyle = "rgba(17,17,17,0.55)"; bones();                 // dark outline so it reads on any background
-  hctx.lineWidth = 4; hctx.strokeStyle = "#E3B33E"; hctx.shadowColor = "rgba(227,179,62,0.9)"; hctx.shadowBlur = 10; bones();
-  hctx.shadowBlur = 0;
+  // a very light outline: thin, soft lines and small dots, so it never covers the film
+  hctx.lineWidth = 1.6; hctx.strokeStyle = "rgba(255,244,214,0.38)";
+  hctx.beginPath(); for (const [a, b] of BONES) { const A = P(lm[a]), B = P(lm[b]); hctx.moveTo(A[0], A[1]); hctx.lineTo(B[0], B[1]); } hctx.stroke();
   for (let i = 0; i < 21; i++) {
-    const [x, y] = P(lm[i]); const big = i === 4 || i === 8 || i === 12;
-    hctx.fillStyle = "#111"; hctx.beginPath(); hctx.arc(x, y, big ? 7.5 : 5.5, 0, Math.PI * 2); hctx.fill();
-    hctx.fillStyle = big ? "#E3B33E" : "#FFFBF1"; hctx.beginPath(); hctx.arc(x, y, big ? 5.5 : 3.8, 0, Math.PI * 2); hctx.fill();
+    const [x, y] = P(lm[i]); const tip = i === 4 || i === 8 || i === 12;
+    hctx.fillStyle = tip ? "rgba(227,179,62,0.65)" : "rgba(255,251,241,0.45)";
+    hctx.beginPath(); hctx.arc(x, y, tip ? 3.6 : 2.2, 0, Math.PI * 2); hctx.fill();
   }
   // full-view ring around the palm while an open hand is held
   if (ring > 0 && ringPalm) {
