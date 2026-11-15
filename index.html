@@ -68,6 +68,31 @@
   #film { width: 100%; max-height: 100%; aspect-ratio: 16 / 9; background: #000; }
   #sticky .note { position: absolute; top: calc(20px + env(safe-area-inset-top)); left: 0; right: 0; text-align: center; color: rgba(255,255,255,.75); font-size: 12px; font-weight: 600; letter-spacing: 1px; }
   @media (orientation: portrait) { #sticky.show #film { transform: none; } }
+
+  /* full view (open hand): the film fills the screen, only sound + vibration icons */
+  #sticky.immersive { background: #000; z-index: 30; }
+  #sticky.immersive #film { position: absolute; left: 50%; top: 50%; width: 100vw; height: 100vh; max-height: none; aspect-ratio: auto; object-fit: contain; transform: translate(-50%, -50%); }
+  @media (orientation: portrait) { #sticky.immersive #film { width: 100vh; height: 100vw; transform: translate(-50%, -50%) rotate(90deg); } }
+  #fullIcons { position: fixed; z-index: 32; right: calc(16px + env(safe-area-inset-right)); top: calc(16px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 12px; transition: opacity .3s; }
+  #fullIcons.hide { opacity: 0; pointer-events: none; }
+  #fullIcons button { width: 48px; height: 48px; border-radius: 48px; border: 1.5px solid rgba(255,255,255,.35); background: rgba(17,17,17,.55); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #fullIcons button.on { background: var(--gold2); color: #111; border-color: var(--gold2); }
+  #fullIcons svg { width: 22px; height: 22px; }
+
+  /* hand tracking */
+  #hands { position: fixed; inset: 0; z-index: 31; pointer-events: none; }
+  #gest { position: fixed; z-index: 14; left: calc(14px + env(safe-area-inset-left)); bottom: calc(92px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 30px; background: rgba(17,17,17,.7); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .3px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: opacity .3s; }
+  #gest.hide { opacity: 0; }
+  #gest .i { font-size: 16px; }
+  #gest.live { box-shadow: 0 0 0 2px var(--gold2); }
+  #toast { position: fixed; z-index: 33; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.92); padding: 14px 24px; border-radius: 18px; background: rgba(17,17,17,.78); color: #fff; font-size: 18px; font-weight: 800; letter-spacing: .3px; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; white-space: nowrap; }
+  #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #help { position: fixed; z-index: 16; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(340px, calc(100vw - 28px)); padding: 16px 18px 12px; border-radius: 18px; background: rgba(253,245,225,.95); color: var(--ink); box-shadow: 0 12px 30px rgba(0,0,0,.35); transition: opacity .4s; }
+  #help.hide { opacity: 0; pointer-events: none; }
+  #help .row { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; padding: 6px 0; border-top: 1px solid #EADFC4; }
+  #help .row:first-of-type { border-top: none; }
+  #help .row b { font-size: 19px; text-align: center; }
+  #help .row span small { display: block; font-size: 11px; color: var(--mute); font-weight: 500; }
 </style>
 <script type="importmap">
 { "imports": { "three": "./lib/three/three.module.js", "three/addons/": "./lib/three/addons/" } }
@@ -82,6 +107,21 @@
 <div id="hint" class="hide"><div id="arrow" class="hide">↑</div><span id="hintText">Point your camera at the cover page</span></div>
 
 <div id="sticky"><div class="note"></div><video id="film" src="assets/film.mp4" playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video></div>
+
+<canvas id="hands"></canvas>
+<div id="gest" class="hide"><span class="i">✋</span><span id="gestText">Loading hand tracking…</span></div>
+<div id="toast"></div>
+<div id="help" class="hide">
+  <div class="kicker" style="color:var(--ink);margin-bottom:6px">Hand controls · hold your hand in front of the camera</div>
+  <div class="row"><b>🤏</b><span>Pinch, then spread or close<small>Make the screen bigger or smaller</small></span></div>
+  <div class="row"><b>👌</b><span>Double pinch<small>Touch thumb and index twice to pause or play</small></span></div>
+  <div class="row"><b>✊</b><span>Make a fist and move<small>Grab the screen and drag it anywhere</small></span></div>
+  <div class="row"><b>🖐</b><span>Show your open hand<small>Full view on / off</small></span></div>
+</div>
+<div id="fullIcons" class="hide">
+  <button id="iSound" class="on" aria-label="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="w" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></button>
+  <button id="iVibe" class="on" aria-label="Vibration"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 8v8M20 8v8M1.5 10v4M22.5 10v4"/></svg></button>
+</div>
 
 <div id="controls" class="hide">
   <button id="bPlay">Pause</button>
@@ -101,11 +141,11 @@
   <div class="word long gold" style="margin-top:4px">I-M-POSSIBLE</div>
   <p class="lead">Lay the cover page flat, hold your phone above it, then lift your phone and watch the page come alive. Turn your sound on.</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
-    <span class="chip">3D sound</span><span class="chip">Vibration</span><span class="chip">Ambient score</span>
+    <span class="chip">Hand gestures</span><span class="chip">3D sound</span><span class="chip">Vibration</span>
   </div>
   <p class="small" style="margin-top:8px">Only in this AR experience. Headphones recommended.</p>
   <button class="btn" id="start"><span class="dot"></span>Start</button>
-  <p class="small">Your camera is used only on this phone, to find the page. Nothing is recorded or uploaded.</p>
+  <p class="small">Your camera is used only on this phone, to find the page and your hand. Nothing is recorded or uploaded.</p>
 </section>
 
 <!-- camera failed -->
@@ -121,6 +161,8 @@
 <script type="module">
 import * as THREE from "three";
 import { MindARThree } from "./lib/mindar/mindar-image-three.prod.js";
+import { FilesetResolver, HandLandmarker } from "./lib/mediapipe/vision_bundle.js";
+import { Gestures } from "./gestures.js";
 
 const $ = (id) => document.getElementById(id);
 const film = $("film");
@@ -156,13 +198,21 @@ async function askOrientation() {
 }
 
 // ───────── unlock audio + video on the first tap (phones need a tap before sound)
+// nothing is heard here: with 3D sound the film's volume is held at zero; without it the film stays muted
 async function unlockFilm() {
-  film.muted = false;
-  try { await film.play(); film.pause(); film.currentTime = 0; } catch (e) { film.muted = true; $("bSound").classList.remove("on"); $("bSound").textContent = "Muted"; }
+  film.muted = !spatial;
+  try { await film.play(); film.pause(); film.currentTime = 0; } catch (e) { film.muted = true; }
+}
+// the film's sound opens only when the screen has landed and the film starts from the beginning
+function openFilmSound() {
+  if (spatial && filmGain) {
+    const t = actx.currentTime;
+    filmGain.gain.cancelScheduledValues(t); filmGain.gain.setValueAtTime(0, t); filmGain.gain.linearRampToValueAtTime(1, t + 0.2);
+  } else film.muted = !soundOn;
 }
 
 // ───────── AR-only extras: ambient score, 3D (spatial) film sound, vibration
-let actx = null, master = null, room = null, ambient = null, ambientGain = null, panner = null, spatial = false;
+let actx = null, master = null, room = null, ambient = null, ambientGain = null, panner = null, filmGain = null, spatial = false;
 const buffers = {};
 let hapticsOn = true, cues = [], cueIdx = 0, lastFilmT = 0;
 const canVibrate = typeof navigator.vibrate === "function";
@@ -204,20 +254,21 @@ async function initAudio() {
     await actx.resume();
     master = actx.createGain(); master.connect(actx.destination);
     const conv = actx.createConvolver(); conv.buffer = makeIR(actx, 2.4);
-    room = actx.createGain(); room.gain.value = 0.16; room.connect(conv); conv.connect(master);
+    room = actx.createGain(); room.gain.value = 0.1; room.connect(conv); conv.connect(master);
     if (actx.state === "running") {
       // the film's sound comes from where the screen floats: turn the phone and it moves around you
       const src = actx.createMediaElementSource(film);
+      filmGain = actx.createGain(); filmGain.gain.value = 0;      // silent until the film starts
+      src.connect(filmGain);
       panner = actx.createPanner();
       panner.panningModel = "HRTF"; panner.distanceModel = "inverse"; panner.refDistance = 1; panner.rolloffFactor = 0;
       const pg = actx.createGain(); pg.gain.value = 0.85;
       const dg = actx.createGain(); dg.gain.value = 0.3;
-      src.connect(panner); panner.connect(pg); pg.connect(master);
-      src.connect(dg); dg.connect(master);
-      src.connect(room);
+      filmGain.connect(panner); panner.connect(pg); pg.connect(master);
+      filmGain.connect(dg); dg.connect(master);
+      filmGain.connect(room);
       spatial = true;
     }
-    Promise.all(["ambient", "sfx_found", "sfx_tick", "sfx_land"].map(loadBuf)).then(() => { if (wantAmbient) startAmbient(); });
     fetch("./assets/haptics.json").then((r) => r.json()).then((j) => (cues = j)).catch(() => {});
   } catch (e) { console.warn("audio extras off", e); }
 }
@@ -252,7 +303,7 @@ function updateListener() {
   if (panner.positionX) { panner.positionX.value = _wp.x; panner.positionY.value = _wp.y; panner.positionZ.value = _wp.z; }
   else panner.setPosition(_wp.x, _wp.y, _wp.z);
 }
-window.__arDebug = () => ({ audio: actx && actx.state, spatial, bufs: Object.keys(buffers), cues: cues.length, ambient: !!ambient, phase, prog: +prog.toFixed(2) });
+window.__arDebug = () => ({ audio: actx && actx.state, spatial, filmGain: filmGain ? +filmGain.gain.value.toFixed(2) : null, muted: film.muted, cues: cues.length, phase, prog: +prog.toFixed(2), hands: !!hands, zoom: +zoom.toFixed(2), immersive });
 function filmHaptics() {
   if (!cues.length || film.paused) return;
   const t = film.currentTime;
@@ -374,6 +425,8 @@ function tick() {
   cam.projectionMatrixInverse.copy(mindar.camera.projectionMatrixInverse);
   updateListener();
   if (phase === "play" || phase === "land") filmHaptics();
+  updateScreen();
+  detectHands(performance.now());
 
   if (phase === "found" || (phase === "scan" && tracking)) {
     if (tracking) samplePagePose();
@@ -391,7 +444,7 @@ function tick() {
       tick.said = true;
       $("scan").classList.add("hide");
       pill("Initialisation done ✓", true);
-      sfx("sfx_found", 0.9); buzz([25, 60, 25]);
+      buzz([25, 60, 25]);
       hint("Now slowly lift your phone up to eye level");
       $("arrow").classList.remove("hide");
       elev0 = Math.asin(camForward(_f).y);
@@ -429,12 +482,12 @@ function tick() {
     sweepMesh.material.opacity = 0;
     if (prog > 0.15) { hint("Keep going…"); }
     const step = Math.floor(prog * 5);                     // a tick + tap at each fifth of the way
-    if (step > (tick.step ?? 0) && step < 5) { tick.step = step; sfx("sfx_tick", 0.5 + 0.12 * step); buzz(8 + step * 6); }
+    if (step > (tick.step ?? 0) && step < 5) { tick.step = step; buzz(8 + step * 6); }
     if (prog >= 0.999) {
       phase = "land"; tLand = t;
       hint(null); $("arrow").classList.add("hide"); hidePill();
-      film.currentTime = 0; film.play().catch(() => {});
-      sfx("sfx_land", 1); buzz([90, 50, 140]); stopAmbient(2.5);
+      film.currentTime = 0; openFilmSound(); film.play().catch(() => {});
+      buzz([90, 50, 140]);
       cueIdx = 0; lastFilmT = 0;
       try { mindar.controller.stopProcessVideo(); } catch (e) {}
     }
@@ -453,6 +506,9 @@ function tick() {
     frameMesh.material.opacity = swap * 0.9;
     if (a > 0.8) {
       phase = "play";
+      screenDir.copy(P1).normalize(); screenD = P1.length(); screenPos.copy(P1); screenQ.copy(Q1);
+      showHelp();
+      gestChip(hands ? "✋" : "⏳", hands ? "Show your hand to the camera" : "Loading hand tracking…");
       coverMesh.visible = glowMesh.visible = sweepMesh.visible = false;
       filmMesh.material.transparent = false; filmMesh.material.opacity = 1; filmMesh.material.needsUpdate = true;
       $("controls").classList.remove("hide");
@@ -462,21 +518,126 @@ function tick() {
   }
 }
 
+// ───────── the floating screen: where it is, how big, moved by hand gestures
+const screenDir = new THREE.Vector3(0, 0, -1), screenPos = new THREE.Vector3(), screenQ = new THREE.Quaternion();
+let screenD = 1, zoom = 1, zoomTarget = 1, zoomBase = 1;
+const _up = new THREE.Vector3(0, 1, 0);
+function faceCamera(pos, out) {
+  const z = pos.clone().negate().normalize();
+  const x = _up.clone().cross(z); if (x.lengthSq() < 1e-6) x.set(1, 0, 0); x.normalize();
+  const y = z.clone().cross(x);
+  return out.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+}
+function updateScreen() {
+  if (phase !== "play") return;
+  zoom += (zoomTarget - zoom) * 0.18;
+  const target = screenDir.clone().multiplyScalar(screenD);
+  screenPos.lerp(target, 0.22);
+  faceCamera(screenPos, screenQ);
+  pageGroup.position.copy(screenPos);
+  pageGroup.quaternion.copy(screenQ);
+  pageGroup.scale.setScalar(pageScale * S1 * zoom);
+}
 // put the screen back straight ahead of wherever the phone is pointing
 function recenter() {
   if (phase !== "play") return;
   const fwd = camForward(new THREE.Vector3()).setY(0);
   if (fwd.lengthSq() < 1e-6) return;
   fwd.normalize();
-  const D = P1.length();
-  P1.copy(fwd).multiplyScalar(D).add(new THREE.Vector3(0, -0.04 * D, 0));
-  const z = P1.clone().negate().normalize();
-  const x = new THREE.Vector3(0, 1, 0).cross(z).normalize();
-  const y = z.clone().cross(x);
-  Q1.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
-  pageGroup.position.copy(P1);
-  pageGroup.quaternion.copy(Q1);
+  screenDir.copy(fwd).add(new THREE.Vector3(0, -0.04, 0)).normalize();
+  zoomTarget = 1; zoomBase = 1;
 }
+
+// ───────── hand tracking (MediaPipe, on this phone) → gestures
+let hands = null, lastDetect = 0, lastTs = 0, dragDir0 = null, immersive = false, helpTimer = 0;
+const handCanvas = $("hands"), hctx = handCanvas.getContext("2d");
+const BONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+function gestChip(icon, text, live = false) { $("gest").querySelector(".i").textContent = icon; $("gestText").textContent = text; $("gest").classList.toggle("live", live); $("gest").classList.remove("hide"); }
+let toastT = 0;
+function toast(text) { $("toast").textContent = text; $("toast").classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => $("toast").classList.remove("show"), 900); }
+function showHelp() { $("help").classList.remove("hide"); clearTimeout(helpTimer); helpTimer = setTimeout(() => $("help").classList.add("hide"), 9000); }
+$("help").onclick = () => $("help").classList.add("hide");
+
+async function loadHands() {
+  try {
+    const fileset = await FilesetResolver.forVisionTasks("./lib/mediapipe/wasm");
+    const opts = (delegate) => ({ baseOptions: { modelAssetPath: "./assets/hand_landmarker.task", delegate }, runningMode: "VIDEO", numHands: 1, minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+    try { hands = await HandLandmarker.createFromOptions(fileset, opts("GPU")); }
+    catch (e) { hands = await HandLandmarker.createFromOptions(fileset, opts("CPU")); }
+    if (phase === "play") gestChip("✋", "Show your hand to the camera");
+  } catch (e) { console.warn("hand tracking off", e); hands = null; $("gest").classList.add("hide"); }
+}
+
+const gestures = new Gestures({
+  hand: (pose) => {
+    if (!pose) return gestChip("✋", "Show your hand to the camera");
+    gestChip({ pinch: "🤏", fist: "✊", open: "🖐", none: "✋" }[pose], { pinch: "Pinch · spread to resize", fist: "Grabbed · move to drag", open: "Open hand · hold for full view", none: "Hand found" }[pose], pose !== "none");
+  },
+  zoomStart: () => { zoomBase = zoomTarget; },
+  zoom: (f) => {
+    const z = Math.min(2.6, Math.max(0.45, zoomBase * f));
+    if (Math.abs(z - zoomTarget) > 0.01) { zoomTarget = z; toast(`${zoomTarget.toFixed(1)}×`); }
+  },
+  toggle: () => { if (film.paused) film.play().catch(() => {}); else film.pause(); toast(film.paused ? "❚❚  Paused" : "▶  Playing"); buzz([20, 40, 20]); },
+  dragStart: () => { dragDir0 = screenDir.clone(); buzz(15); },
+  drag: (dx, dy) => {
+    if (!dragDir0 || immersive) return;
+    const pm = mindar.camera.projectionMatrix.elements;
+    const hfov = 2 * Math.atan(1 / pm[0]), vfov = 2 * Math.atan(1 / pm[5]);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(qCam);
+    const d = dragDir0.clone()
+      .applyAxisAngle(_up, -dx * hfov * 1.3)
+      .applyAxisAngle(right, -dy * vfov * 1.3);
+    screenDir.copy(d.normalize());
+  },
+  dragEnd: () => { dragDir0 = null; buzz(10); },
+  open: () => { setImmersive(!immersive); buzz([30, 30, 30]); },
+});
+
+window.__arGesture = (name, ...args) => gestures.on[name] && gestures.on[name](...args);   // for automated tests
+function detectHands(now) {
+  if (!hands || phase !== "play") return;
+  const v = mindar.video;
+  if (!v || v.readyState < 2 || now - lastDetect < 60) return;
+  lastDetect = now;
+  const ts = Math.max(lastTs + 1, Math.round(now));
+  lastTs = ts;
+  let lm = null;
+  try { const r = hands.detectForVideo(v, ts); lm = r.landmarks && r.landmarks[0] ? r.landmarks[0] : null; } catch (e) {}
+  gestures.update(lm, now / 1000);
+  drawHand(lm, v);
+}
+function drawHand(lm, v) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = window.innerWidth, H = window.innerHeight;
+  if (handCanvas.width !== W * dpr || handCanvas.height !== H * dpr) { handCanvas.width = W * dpr; handCanvas.height = H * dpr; handCanvas.style.width = W + "px"; handCanvas.style.height = H + "px"; }
+  hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  hctx.clearRect(0, 0, W, H);
+  if (!lm) return;
+  const r = v.getBoundingClientRect();
+  const P = (p) => [r.left + p.x * r.width, r.top + p.y * r.height];
+  hctx.lineWidth = 2.5; hctx.strokeStyle = "rgba(227,179,62,0.85)"; hctx.lineCap = "round";
+  hctx.shadowColor = "rgba(227,179,62,0.8)"; hctx.shadowBlur = 8;
+  hctx.beginPath();
+  for (const [a, b] of BONES) { const A = P(lm[a]), B = P(lm[b]); hctx.moveTo(A[0], A[1]); hctx.lineTo(B[0], B[1]); }
+  hctx.stroke();
+  hctx.shadowBlur = 0;
+  for (let i = 0; i < 21; i++) { const [x, y] = P(lm[i]); hctx.fillStyle = i === 4 || i === 8 ? "#E3B33E" : "#FFFBF1"; hctx.beginPath(); hctx.arc(x, y, i === 4 || i === 8 ? 5 : 3.2, 0, Math.PI * 2); hctx.fill(); }
+}
+
+// full view: film fills the screen, only sound + vibration icons
+function setImmersive(on) {
+  immersive = on;
+  pageGroup.visible = !on;                 // the floating screen hides while the film fills the phone
+  $("sticky").classList.toggle("show", on);
+  $("sticky").classList.toggle("immersive", on);
+  $("controls").classList.toggle("hide", on);
+  $("fullIcons").classList.toggle("hide", !on);
+  $("help").classList.add("hide");
+  $("gest").style.visibility = on ? "hidden" : "";
+  toast(on ? "Full view" : "Back to AR");
+}
+$("sticky").addEventListener("click", (e) => { if (immersive && e.target === film) setImmersive(false); });
 
 async function startAR() {
   $("intro").classList.add("hide");
@@ -499,7 +660,7 @@ async function startAR() {
     return;
   }
   phase = "scan";
-  startAmbient();
+  loadHands();
   $("scan").classList.remove("hide");
   hint("Hold your phone above the cover and point down at it");
   pill("Scanning the cover…");
@@ -512,21 +673,25 @@ $("bPlay").onclick = () => { if (film.paused) film.play(); else film.pause(); };
 film.addEventListener("play", () => ($("bPlay").textContent = "Pause"));
 film.addEventListener("pause", () => ($("bPlay").textContent = "Play"));
 let soundOn = true;
-$("bSound").onclick = () => {
-  soundOn = !soundOn;
-  if (master) master.gain.value = soundOn ? 1 : 0; else film.muted = !soundOn;
-  $("bSound").classList.toggle("on", soundOn); $("bSound").textContent = soundOn ? "Sound" : "Muted";
-};
-$("bVibe").onclick = () => { hapticsOn = !hapticsOn; $("bVibe").classList.toggle("on", hapticsOn); $("bVibe").textContent = hapticsOn ? "Vibe" : "No vibe"; if (hapticsOn) buzz(30); };
+function setSound(on) {
+  soundOn = on;
+  if (master) master.gain.value = on ? 1 : 0; else if (phase === "play" || phase === "land" || immersive) film.muted = !on;
+  $("bSound").classList.toggle("on", on); $("bSound").textContent = on ? "Sound" : "Muted";
+  $("iSound").classList.toggle("on", on); $("iSound").querySelector(".w").style.opacity = on ? 1 : 0;
+}
+function setVibe(on) {
+  hapticsOn = on;
+  $("bVibe").classList.toggle("on", on); $("bVibe").textContent = on ? "Vibe" : "No vibe";
+  $("iVibe").classList.toggle("on", on);
+  if (on) buzz(30);
+}
+$("bSound").onclick = () => setSound(!soundOn);
+$("iSound").onclick = (e) => { e.stopPropagation(); setSound(!soundOn); };
+$("bVibe").onclick = () => setVibe(!hapticsOn);
+$("iVibe").onclick = (e) => { e.stopPropagation(); setVibe(!hapticsOn); };
 $("bAgain").onclick = () => { film.currentTime = 0; film.play(); };
 $("bCenter").onclick = recenter;
-$("bFull").onclick = () => {
-  $("sticky").classList.add("show");
-  if (film.requestFullscreen) film.requestFullscreen().then(() => screen.orientation?.lock?.("landscape").catch(() => {})).catch(() => {});
-  else if (film.webkitEnterFullscreen) film.webkitEnterFullscreen();
-};
-document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) $("sticky").classList.remove("show"); });
-film.addEventListener("webkitendfullscreen", () => $("sticky").classList.remove("show"));
+$("bFull").onclick = () => setImmersive(!immersive);
 
 $("start").onclick = async () => { await askOrientation(); await initAudio(); await unlockFilm(); startAR(); };
 $("retry").onclick = async () => { location.reload(); };
@@ -535,6 +700,7 @@ $("watch").onclick = async () => {
   $("fail").classList.add("hide");
   $("sticky").classList.add("show");
   $("controls").classList.remove("hide");
+  openFilmSound();
   film.play().catch(() => {});
 };
 </script>
