@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FDF5E1">
+<title>I-M-Possible · Vertex Interactive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:ital,wdth,wght@0,62.5..100,500..800;1,62.5..100,500&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #FDF5E1; --ink: #111; --ink2: #34312B; --mute: #7C7462; --gold: #B47F12; --gold2: #E3B33E; --ok: #0E6B5E; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: "Poppins", system-ui, sans-serif; color: var(--ink); }
+  #container { position: fixed; inset: 0; }
+  #container video { object-fit: cover; }
+
+  .screen { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: center; padding: 28px 26px calc(28px + env(safe-area-inset-bottom)); background: var(--bg); transition: opacity .5s ease; }
+  .screen.hide { opacity: 0; pointer-events: none; }
+  .kicker { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--mute); }
+  .rowrule { display: flex; align-items: center; gap: 12px; }
+  .rowrule i { flex: 1; height: 2px; background: var(--ink); }
+  .pov { font-family: "Noto Serif Display", serif; font-weight: 500; font-size: 22px; }
+  .word { font-family: "Noto Serif Display", serif; font-stretch: 62.5%; font-weight: 800; line-height: .92; font-size: min(17vw, 96px); letter-spacing: -.5px; white-space: nowrap; }
+  .word.long { font-size: min(14.2vw, 82px); }
+  .gold { color: var(--gold); }
+  .lead { font-size: 15px; line-height: 1.55; font-weight: 600; color: var(--ink2); margin-top: 22px; max-width: 420px; }
+  .btn { margin-top: 26px; align-self: flex-start; display: inline-flex; align-items: center; gap: 12px; padding: 16px 26px; border-radius: 40px; border: none; background: var(--ink); color: #fff; font: 700 15px "Poppins", sans-serif; letter-spacing: .3px; cursor: pointer; }
+  .btn .dot { width: 9px; height: 9px; border-radius: 9px; background: var(--gold2); box-shadow: 0 0 0 4px rgba(227,179,62,.25); }
+  .btn.ghost { background: transparent; color: var(--ink); border: 2px solid var(--ink); padding: 12px 22px; }
+  .small { font-size: 11.5px; color: var(--mute); margin-top: 16px; line-height: 1.5; max-width: 420px; }
+
+  /* scanning frame */
+  #scan { position: fixed; inset: 0; z-index: 10; pointer-events: none; display: flex; align-items: center; justify-content: center; transition: opacity .4s; }
+  #scan.hide { opacity: 0; }
+  .frame { position: relative; width: min(62vw, 46vh); aspect-ratio: 2 / 3; }
+  .frame b { position: absolute; width: 34px; height: 34px; border: 3px solid #fff; filter: drop-shadow(0 0 6px rgba(0,0,0,.45)); }
+  .frame b:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
+  .frame b:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-radius: 0 10px 0 0; }
+  .frame b:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 10px; }
+  .frame b:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
+  .frame .line { position: absolute; left: 6%; right: 6%; height: 2px; background: linear-gradient(90deg, transparent, var(--gold2), transparent); box-shadow: 0 0 12px var(--gold2); animation: sweep 2.2s ease-in-out infinite; }
+  @keyframes sweep { 0% { top: 4%; } 50% { top: 94%; } 100% { top: 4%; } }
+
+  /* status pill */
+  #pill { position: fixed; z-index: 12; left: 50%; top: calc(18px + env(safe-area-inset-top)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 11px 18px; border-radius: 40px; background: rgba(253,245,225,.94); color: var(--ink); font-size: 13px; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,.25); white-space: nowrap; transition: opacity .35s, transform .35s; }
+  #pill.hide { opacity: 0; transform: translate(-50%, -10px); }
+  #pill .d { width: 9px; height: 9px; border-radius: 9px; background: var(--gold2); animation: pulse 1.2s infinite; }
+  #pill.ok .d { background: var(--ok); animation: none; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  #hint { position: fixed; z-index: 12; left: 0; right: 0; bottom: calc(110px + env(safe-area-inset-bottom)); text-align: center; color: #fff; font-size: 14px; font-weight: 600; text-shadow: 0 2px 10px rgba(0,0,0,.7); padding: 0 24px; transition: opacity .35s; }
+  #hint.hide { opacity: 0; }
+
+  /* controls */
+  #controls { position: fixed; z-index: 14; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 10px; padding: 8px; border-radius: 40px; background: rgba(17,17,17,.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity .35s; }
+  #controls.hide { opacity: 0; pointer-events: none; }
+  #controls button { min-width: 48px; height: 44px; padding: 0 16px; border-radius: 30px; border: none; background: rgba(255,255,255,.12); color: #fff; font: 700 13px "Poppins", sans-serif; cursor: pointer; }
+  #controls button.on { background: var(--gold2); color: #111; }
+
+  /* film on screen (when the page is out of view) */
+  #sticky { position: fixed; z-index: 13; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.86); opacity: 0; pointer-events: none; transition: opacity .35s; }
+  #sticky.show { opacity: 1; pointer-events: auto; }
+  #film { width: 100%; max-height: 100%; aspect-ratio: 16 / 9; background: #000; }
+  #sticky .note { position: absolute; top: calc(20px + env(safe-area-inset-top)); left: 0; right: 0; text-align: center; color: rgba(255,255,255,.75); font-size: 12px; font-weight: 600; letter-spacing: 1px; }
+  @media (orientation: portrait) { #sticky.show #film { transform: none; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./lib/three/three.module.js", "three/addons/": "./lib/three/addons/" } }
+</script>
+</head>
+<body>
+
+<div id="container"></div>
+
+<div id="scan" class="hide"><div class="frame"><b></b><b></b><b></b><b></b><div class="line"></div></div></div>
+<div id="pill" class="hide"><span class="d"></span><span id="pillText">Scanning the cover…</span></div>
+<div id="hint" class="hide">Point your camera at the cover page</div>
+
+<div id="sticky"><div class="note">Point at the cover again to return to AR</div><video id="film" src="assets/film.mp4" playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video></div>
+
+<div id="controls" class="hide">
+  <button id="bPlay">Pause</button>
+  <button id="bSound" class="on">Sound on</button>
+  <button id="bAgain">Replay</button>
+  <button id="bFull">Full screen</button>
+</div>
+
+<!-- intro -->
+<section id="intro" class="screen">
+  <div class="kicker" style="color:var(--ink)">Vertex Interactive</div>
+  <div class="rowrule" style="margin-top:30px"><span class="pov">Everyone's POV,</span><i></i></div>
+  <div class="word" style="margin-top:4px">IMPOSSIBLE</div>
+  <div class="rowrule" style="margin-top:18px"><span class="pov">My POV,</span><i></i></div>
+  <div class="word long gold" style="margin-top:4px">I-M-POSSIBLE</div>
+  <p class="lead">Point your camera at the cover page and watch it come alive. Turn your sound on.</p>
+  <button class="btn" id="start"><span class="dot"></span>Start</button>
+  <p class="small">Your camera is used only on this phone, to find the page. Nothing is recorded or uploaded.</p>
+</section>
+
+<!-- camera failed -->
+<section id="fail" class="screen hide">
+  <div class="kicker" style="color:var(--ink)">Camera not available</div>
+  <p class="lead">We couldn't open the camera. Allow camera access for this page and try again, or just watch the film.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <button class="btn" id="retry"><span class="dot"></span>Try again</button>
+    <button class="btn ghost" id="watch">Watch the film</button>
+  </div>
+</section>
+
+<script type="module">
+import * as THREE from "three";
+import { MindARThree } from "./lib/mindar/mindar-image-three.prod.js";
+
+const $ = (id) => document.getElementById(id);
+const film = $("film");
+const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const clamp01 = (t) => Math.min(1, Math.max(0, t));
+const seg = (t, a, b) => clamp01((t - a) / (b - a));
+
+let mindar = null;
+let state = "idle";        // idle → scanning → intro → playing
+let foundAt = -1;
+let visible = false;
+let introDone = false;
+
+function pill(text, ok = false) { $("pillText").textContent = text; $("pill").classList.toggle("ok", ok); $("pill").classList.remove("hide"); }
+function hidePill() { $("pill").classList.add("hide"); }
+
+// ── unlock audio + video on the first tap (iOS needs a user gesture)
+async function unlockFilm() {
+  film.muted = false;
+  try { await film.play(); film.pause(); film.currentTime = 0; } catch (e) { film.muted = true; $("bSound").classList.remove("on"); $("bSound").textContent = "Sound off"; }
+}
+
+async function startAR() {
+  $("intro").classList.add("hide");
+  $("fail").classList.add("hide");
+  pill("Starting camera…");
+  try {
+    mindar = new MindARThree({
+      container: $("container"),
+      imageTargetSrc: "./assets/cover.mind",
+      uiLoading: "no", uiScanning: "no", uiError: "no",
+      filterMinCF: 0.0001, filterBeta: 0.001,
+      missTolerance: 8, warmupTolerance: 3,
+    });
+    buildScene();
+    await mindar.start();
+  } catch (e) {
+    console.error(e);
+    hidePill();
+    $("fail").classList.remove("hide");
+    return;
+  }
+  state = "scanning";
+  $("scan").classList.remove("hide");
+  $("hint").classList.remove("hide");
+  pill("Scanning the cover…");
+  const { renderer, scene, camera } = mindar;
+  renderer.setAnimationLoop(() => { tick(); renderer.render(scene, camera); });
+}
+
+// ── 3D: the cover sits exactly on the printed page, lifts, turns landscape and becomes the film
+let stage, coverMesh, glowMesh, sweepMesh, filmMesh, frameMesh;
+function buildScene() {
+  const anchor = mindar.addAnchor(0);
+  stage = new THREE.Group();
+  anchor.group.add(stage);
+  const H = 1536 / 1024;                       // target is 1 unit wide, 1.5 tall
+
+  const tex = new THREE.TextureLoader().load("./assets/cover.jpg");
+  tex.colorSpace = THREE.SRGBColorSpace;
+  coverMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, H), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0 }));
+  glowMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.08, H + 0.08), new THREE.MeshBasicMaterial({ color: 0xe3b33e, transparent: true, opacity: 0 }));
+  glowMesh.position.z = -0.002;
+  sweepMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.02), new THREE.MeshBasicMaterial({ color: 0xe3b33e, transparent: true, opacity: 0 }));
+  sweepMesh.position.z = 0.003;
+  stage.add(glowMesh, coverMesh, sweepMesh);
+
+  const vtex = new THREE.VideoTexture(film);
+  vtex.colorSpace = THREE.SRGBColorSpace;
+  const FW = 1.5, FH = 1.5 * 9 / 16;           // the film takes the page's long side once it turns landscape
+  frameMesh = new THREE.Mesh(new THREE.PlaneGeometry(FW + 0.05, FH + 0.05), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0 }));
+  frameMesh.position.z = 0.004;
+  filmMesh = new THREE.Mesh(new THREE.PlaneGeometry(FW, FH), new THREE.MeshBasicMaterial({ map: vtex, transparent: true, opacity: 0, toneMapped: false }));
+  filmMesh.position.z = 0.01;
+  filmMesh.renderOrder = 3; frameMesh.renderOrder = 2; coverMesh.renderOrder = 1;
+  stage.add(frameMesh, filmMesh);
+
+  anchor.onTargetFound = () => {
+    visible = true;
+    if (foundAt < 0) { foundAt = performance.now() / 1000; state = "intro"; }
+    $("scan").classList.add("hide");
+    $("hint").classList.add("hide");
+    $("sticky").classList.remove("show");
+    if (introDone) { pill("Tracking the page", true); setTimeout(hidePill, 1200); }
+  };
+  anchor.onTargetLost = () => {
+    visible = false;
+    if (introDone) {
+      // keep the film going on screen until the page is found again
+      $("sticky").classList.add("show");
+    } else if (state === "intro") {
+      pill("Hold steady — point at the cover");
+    }
+  };
+}
+
+function tick() {
+  if (foundAt < 0 || !stage) return;
+  const t = performance.now() / 1000 - foundAt;
+
+  if (!introDone) {
+    // 0.0–0.7  the page lights up exactly where it is printed; a gold line scans it
+    const appear = ease(seg(t, 0, 0.5));
+    coverMesh.material.opacity = appear;
+    glowMesh.material.opacity = 0.55 * appear * (1 - seg(t, 1.6, 2.4));
+    const sw = seg(t, 0.05, 1.0);
+    sweepMesh.material.opacity = sw > 0 && sw < 1 ? 0.95 : 0;
+    sweepMesh.position.y = 0.75 - sw * 1.5;
+    if (t > 1.0 && state === "intro" && !tick.said) { tick.said = true; pill("Initialisation done ✓  Hold your screen above the page", true); }
+
+    // 1.2–2.0  lift above the page, towards the centre
+    const lift = ease(seg(t, 1.2, 2.0));
+    // 2.0–3.0  turn into landscape
+    const turn = ease(seg(t, 2.0, 3.0));
+    // 2.8–3.5  the page becomes the film
+    const swap = ease(seg(t, 2.8, 3.5));
+    stage.position.z = 0.18 * lift;
+    stage.rotation.z = -Math.PI / 2 * turn;
+    const sc = 1 - 0.1 * lift + 0.1 * turn;
+    stage.scale.setScalar(sc);
+    coverMesh.material.opacity = appear * (1 - swap);
+    filmMesh.material.opacity = swap;
+    frameMesh.material.opacity = swap * 0.9;
+
+    if (t >= 2.8 && film.paused && !tick.started) { tick.started = true; film.currentTime = 0; film.play().catch(() => {}); }
+    if (t >= 3.5) {
+      introDone = true;
+      coverMesh.visible = false; glowMesh.visible = false; sweepMesh.visible = false;
+      filmMesh.material.transparent = false; filmMesh.material.opacity = 1; filmMesh.material.needsUpdate = true;
+      frameMesh.material.transparent = false; frameMesh.material.needsUpdate = true;
+      state = "playing";
+      setTimeout(() => pill("Turn your phone sideways ⟳ for the full view", true), 1400);
+      setTimeout(hidePill, 6000);
+      $("controls").classList.remove("hide");
+      if (!visible) $("sticky").classList.add("show");
+    }
+  }
+}
+
+// ── controls
+$("bPlay").onclick = () => { if (film.paused) { film.play(); } else { film.pause(); } };
+film.addEventListener("play", () => ($("bPlay").textContent = "Pause"));
+film.addEventListener("pause", () => ($("bPlay").textContent = "Play"));
+film.addEventListener("ended", () => ($("bPlay").textContent = "Play"));
+$("bSound").onclick = () => { film.muted = !film.muted; $("bSound").classList.toggle("on", !film.muted); $("bSound").textContent = film.muted ? "Sound off" : "Sound on"; };
+$("bAgain").onclick = () => { film.currentTime = 0; film.play(); };
+$("bFull").onclick = () => {
+  $("sticky").classList.add("show");
+  const v = film;
+  if (v.requestFullscreen) v.requestFullscreen().then(() => screen.orientation?.lock?.("landscape").catch(() => {})).catch(() => {});
+  else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+};
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && visible) $("sticky").classList.remove("show"); });
+
+$("start").onclick = async () => { await unlockFilm(); startAR(); };
+$("retry").onclick = async () => { await unlockFilm(); location.reload(); };
+$("watch").onclick = async () => {
+  await unlockFilm();
+  $("fail").classList.add("hide");
+  $("sticky").classList.add("show");
+  $("sticky").querySelector(".note").textContent = "";
+  $("controls").classList.remove("hide");
+  film.play().catch(() => {});
+};
+</script>
+</body>
+</html>
