@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1100">
+<meta name="robots" content="noindex, nofollow">
+<title>Impossible to I-M-Possible · book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:ital,wdth,wght@0,62.5..100,400..900;1,62.5..100,400..700&family=Poppins:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FDF5E1;
+    --paper: #FFFBF1;
+    --ink: #111111;
+    --ink2: #34312B;
+    --mute: #7C7462;
+    --line: #1A1A1A;
+    --soft: #EADFC4;
+    --gold: #B47F12;
+    --gold2: #E3B33E;
+    --gold1: #A8740F;
+    --measured: #0E6B5E;
+    --theory: #B4601A;
+    --red: #9E2B1F;
+  }
+  @page { size: 8in 12in; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); }
+  body { font-family: "Poppins", sans-serif; font-weight: 500; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 768px; height: 1152px; position: relative; overflow: hidden; background: var(--bg); page-break-after: always; break-after: page; padding: 70px 64px 0; }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+  .page > * { position: relative; }
+
+  .serif { font-family: "Noto Serif Display", serif; }
+  .cond { font-family: "Noto Serif Display", serif; font-stretch: 68%; font-weight: 800; letter-spacing: -0.5px; line-height: 0.95; }
+  .gold { color: var(--gold); }
+  svg.word { display: block; overflow: visible; }
+  .kicker { font-size: 11px; font-weight: 700; letter-spacing: 3.2px; text-transform: uppercase; color: var(--mute); }
+  .rule { height: 2px; background: var(--line); }
+  .rowrule { display: flex; align-items: center; gap: 16px; }
+  .rowrule .rule { flex: 1; }
+  .italic { font-family: "Noto Serif Display", serif; font-style: italic; font-weight: 500; }
+
+  .foot { position: absolute !important; left: 64px; right: 64px; bottom: 34px; display: flex; justify-content: space-between; font-size: 9.5px; letter-spacing: 2.4px; text-transform: uppercase; color: var(--mute); font-weight: 600; }
+
+  .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 700; letter-spacing: 2px; padding: 3px 9px; border-radius: 20px; border: 1.4px solid; text-transform: uppercase; white-space: nowrap; vertical-align: middle; }
+  .tag::before { content: ""; width: 5px; height: 5px; border-radius: 5px; background: currentColor; }
+  .tag.m { color: var(--measured); }
+  .tag.t { color: var(--theory); }
+
+  .cover { padding: 0; }
+  .cover img { width: 768px; height: 1152px; display: block; }
+
+  /* list page */
+  .list-item { display: grid; grid-template-columns: 70px 1fr; align-items: baseline; padding: 11px 0 10px; border-bottom: 1.5px solid var(--soft); }
+  .list-item .n { font-family: "Noto Serif Display", serif; font-stretch: 68%; font-weight: 800; font-size: 34px; color: var(--gold); line-height: 1; }
+  .list-item .t { font-size: 18px; font-weight: 700; line-height: 1.25; letter-spacing: -0.2px; }
+
+  /* ── impossible page ── */
+  .ghost { position: absolute !important; right: 30px; top: 40px; font-family: "Noto Serif Display", serif; font-stretch: 62.5%; font-weight: 900; font-size: 430px; line-height: 1; color: #F3E7C8; letter-spacing: -8px; z-index: 0; }
+  .stamp { font-size: 10px; font-weight: 800; letter-spacing: 3px; color: var(--red); border: 2px solid var(--red); padding: 3px 9px 2px; border-radius: 3px; display: inline-block; transform: rotate(-2deg); }
+  .bigstamp { font-size: 15px; letter-spacing: 5px; padding: 6px 14px 5px; border-width: 2.5px; }
+  .imp-h { font-family: "Noto Serif Display", serif; font-stretch: 68%; font-weight: 800; font-size: 66px; line-height: 0.96; letter-spacing: -0.6px; margin-top: 26px; }
+  .imp-why { font-size: 17px; line-height: 1.55; color: var(--ink2); font-weight: 500; margin-top: 22px; max-width: 610px; }
+  .nolist { margin-top: 26px; border-top: 2px solid var(--line); }
+  .nolist .k { font-size: 11px; font-weight: 700; letter-spacing: 3.2px; text-transform: uppercase; color: var(--ink); margin: 16px 0 6px; }
+  .no { display: grid; grid-template-columns: 34px 1fr; align-items: baseline; padding: 9px 0; border-bottom: 1.5px solid var(--soft); font-size: 16px; font-weight: 700; line-height: 1.35; }
+  .no::before { content: "✕"; color: var(--red); font-weight: 800; font-size: 16px; }
+  .no small { display: block; font-size: 12.5px; font-weight: 500; color: var(--mute); margin-top: 2px; }
+  .stats2 { position: absolute !important; left: 64px; right: 64px; bottom: 76px; display: grid; grid-template-columns: 1fr 1fr; background: var(--paper); border: 2px solid var(--ink); border-radius: 16px; }
+  .stats2 > div { padding: 20px 22px 18px; }
+  .stats2 > div + div { border-left: 1.5px solid var(--soft); }
+  .stats2 .big { font-size: 50px; white-space: nowrap; }
+  .big { font-family: "Noto Serif Display", serif; font-stretch: 68%; font-weight: 800; font-size: 58px; line-height: 1; letter-spacing: -0.3px; }
+  .cap { font-size: 13px; line-height: 1.45; color: var(--ink2); margin-top: 8px; font-weight: 500; }
+  .src { font-size: 9.5px; color: var(--mute); margin-top: 6px; font-weight: 500; letter-spacing: 0.2px; }
+
+  /* ── possible page ── */
+  .was { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 16px; border-bottom: 2px solid var(--line); margin-top: 16px; }
+  .was .txt { font-size: 14.5px; font-weight: 600; color: var(--mute); text-decoration: line-through; text-decoration-color: var(--red); text-decoration-thickness: 2px; line-height: 1.4; }
+  .tname { font-family: "Noto Serif Display", serif; font-stretch: 68%; font-weight: 800; font-size: 104px; line-height: 0.9; letter-spacing: -1px; margin-top: 26px; }
+  .trole { font-size: 13px; font-weight: 700; letter-spacing: 3.4px; text-transform: uppercase; color: var(--ink2); margin-top: 22px; }
+  .now { display: flex; align-items: center; gap: 14px; margin-top: 20px; }
+  .now .w { font-family: "Noto Serif Display", serif; font-stretch: 68%; font-weight: 800; font-size: 34px; line-height: 1; color: var(--gold); }
+  .now .rule { flex: 1; height: 2px; }
+  .plain { font-size: 19px; line-height: 1.5; font-weight: 600; margin-top: 14px; letter-spacing: -0.1px; }
+  .grid { display: grid; gap: 14px; margin-top: 24px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card { background: var(--paper); border: 1.5px solid var(--soft); border-radius: 14px; padding: 18px 18px 16px; position: relative; }
+  .card.hero { background: #fff; border: 2px solid var(--ink); }
+  .card .big { font-size: 58px; }
+  .card.small .big { font-size: 40px; }
+  .card .lab { font-size: 13px; font-weight: 700; margin-top: 8px; line-height: 1.35; }
+  .card .cap { margin-top: 4px; font-size: 11.5px; color: var(--mute); }
+  .card .tag { position: absolute; top: 14px; right: 14px; }
+  .basis { position: absolute !important; left: 64px; right: 64px; bottom: 64px; font-size: 10px; line-height: 1.5; color: var(--mute); border-top: 1.5px solid var(--soft); padding-top: 10px; font-weight: 500; }
+
+  .chart { margin-top: 18px; background: var(--paper); border: 1.5px solid var(--soft); border-radius: 14px; padding: 18px 20px 16px; }
+  .chart h4 { font-size: 11px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; color: var(--mute); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .bar { display: grid; grid-template-columns: 112px 1fr 92px; align-items: center; gap: 12px; margin: 7px 0; font-size: 12.5px; font-weight: 600; }
+  .bar .track { height: 16px; background: #F1E8D3; border-radius: 4px; overflow: hidden; }
+  .bar .fill { height: 100%; background: #BDB29B; border-radius: 4px; }
+  .bar.us .fill { background: linear-gradient(90deg, var(--gold1), var(--gold2)); }
+  .bar.us { font-weight: 800; }
+  .bar .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .pair { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; margin: 9px 0; font-size: 12px; font-weight: 700; }
+  .pair .bars { display: flex; flex-direction: column; gap: 3px; }
+  .pair .b { height: 11px; border-radius: 3px; display: flex; align-items: center; }
+  .pair .b span { font-size: 9.5px; font-weight: 700; margin-left: calc(100% + 6px); white-space: nowrap; }
+  .legend { display: flex; gap: 18px; font-size: 10.5px; font-weight: 600; color: var(--ink2); margin-top: 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 16px; font-size: 13.5px; font-weight: 700; }
+  .checks span::before { content: "✓"; color: var(--measured); margin-right: 8px; font-weight: 800; }
+  .ready { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 12px; padding: 10px 16px; border: 2px solid var(--ink); border-radius: 16px; background: #FFFBF1; }
+  .ready .k { font-size: 10px; font-weight: 700; letter-spacing: 2.6px; text-transform: uppercase; color: var(--mute); }
+  .ready .rr { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 7px; font-size: 13px; font-weight: 700; }
+  .ready .rr .y::before { content: "✓"; color: var(--measured); margin-right: 6px; font-weight: 800; }
+  .ready .rr .w { color: var(--theory); }
+  .ready .rr .w::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 8px; background: var(--theory); margin-right: 7px; vertical-align: 1px; }
+  .ready .pw { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--ink2); }
+  .ready .pw b { font-weight: 800; color: var(--ink); }
+  .ready .rq { display: flex; align-items: center; gap: 10px; flex: none; }
+  .ready .rq img { width: 72px; height: 72px; display: block; border: 1.5px solid #111; border-radius: 8px; padding: 4px; background: #FFFBF1; }
+  .ready .rq .t { text-align: right; font-size: 9px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; }
+  .ready .rq .t i { display: block; font-family: "Noto Serif Display", serif; font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 500; color: var(--ink2); margin-top: 2px; }
+  .status { display: flex; align-items: center; gap: 10px; margin-top: 20px; font-size: 13.5px; font-weight: 800; color: var(--theory); letter-spacing: 2px; text-transform: uppercase; }
+  .status::before { content: ""; width: 9px; height: 9px; border-radius: 9px; background: var(--theory); }
+
+  /* NDA page */
+  .nda-clause { display: grid; grid-template-columns: 26px 1fr; gap: 4px; font-size: 11.8px; line-height: 1.5; color: var(--ink2); padding: 6.5px 0; border-bottom: 1px solid var(--soft); }
+  .nda-clause b { color: var(--ink); font-weight: 700; }
+  .nda-clause .cn { font-family: "Noto Serif Display", serif; font-stretch: 68%; font-weight: 800; font-size: 15px; color: var(--gold); line-height: 1.2; }
+  .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  .sigbox { background: #fff; border: 2px solid var(--ink); border-radius: 14px; padding: 14px 18px 12px; }
+  .field { margin-top: 12px; }
+  .field .ln { height: 26px; border-bottom: 1.5px solid var(--ink); }
+  .field .fl { font-size: 9px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; color: var(--mute); margin-top: 4px; }
+</style>
+<link rel="stylesheet" href="book.css">
+</head>
+<body>
+<div id="book"><div class="sheet s2"></div><div class="sheet s1"></div>
+<!-- COVER -->
+<section class="page cover" id="cover"><img src="assets/book/cover.png" alt="Everyone's POV, Impossible. My POV, I-M-Possible.">
+  <div style="position:absolute;right:56px;bottom:52px;display:flex;align-items:flex-end;gap:14px">
+    <div style="text-align:right;padding-bottom:4px">
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#111">Scan me</div>
+      <div style="font-family:'Noto Serif Display',serif;font-style:italic;font-size:15px;color:#34312B;margin-top:3px">and watch this page come alive</div>
+    </div>
+    <img src="assets/book/qr.png" style="width:104px;height:104px;display:block;border:2px solid #111;border-radius:10px;padding:6px;background:#FFFBF1" alt="QR code">
+  </div>
+</section>
+
+
+
+
+<!-- THE LIST -->
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV</div><div class="rule"></div></div>
+  <div class="cond" style="font-size:72px;margin-top:20px">Eight things<br>the world calls</div>
+  <div class="cond" style="font-size:108px;margin-top:4px">IMPOSSIBLE.</div>
+  <p style="font-size:15px;line-height:1.55;color:var(--ink2);margin:18px 0 6px;max-width:600px">Each one is a problem the biggest companies on Earth spend years and billions of dollars on. First page: why it can't be done. Next page: what we built, with the numbers marked <b style="color:var(--measured)">Measured</b> (run on real hardware) or <b style="color:var(--theory)">Theoretical</b> (from simulation).</p>
+  <div>
+    <div class="list-item"><div class="n">01</div><div class="t">Make AI's engine code faster than the code Big Tech ships.</div></div>
+    <div class="list-item"><div class="n">02</div><div class="t">Replace the method that has trained almost every AI since 2014.</div></div>
+    <div class="list-item"><div class="n">03</div><div class="t">Train the same AI in less than half the time, with a third of the energy.</div></div>
+    <div class="list-item"><div class="n">04</div><div class="t">Teach an AI a new language without it forgetting what it knew.</div></div>
+    <div class="list-item"><div class="n">05</div><div class="t">Fix one skill inside a finished AI without breaking the rest.</div></div>
+    <div class="list-item"><div class="n">06</div><div class="t">Build your own AI models from zero, outside a big lab.</div></div>
+    <div class="list-item"><div class="n">07</div><div class="t">Design a 2 nm GPU from scratch, alone, in 24 hours.</div></div>
+    <div class="list-item" style="border-bottom:none"><div class="n">08</div><div class="t">Give AI a memory that grows by itself.</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ═════ 01 ═════ -->
+<section class="page">
+  <div class="ghost">01</div>
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV · 01 of 08</div><div class="rule"></div></div>
+  <div style="margin-top:34px"><span class="stamp bigstamp">IMPOSSIBLE</span></div>
+  <div class="imp-h">Make AI's engine code faster than the code Big Tech ships.</div>
+  <p class="imp-why">Every AI model runs on low-level GPU code written by expert teams and tuned for years. Most engineers never touch it. Beating it is thought to be out of reach for anyone outside those teams.</p>
+  <div class="nolist">
+    <div class="k">Why everyone said no</div>
+    <div class="no"><span>Written by expert teams at NVIDIA and Meta<small>The people who build the GPUs and the frameworks.</small></span></div>
+    <div class="no"><span>Tuned for years, for every new GPU<small>Each new chip gets its own round of hand-tuning.</small></span></div>
+    <div class="no"><span>Already close to the hardware's limits<small>Little room is thought to be left.</small></span></div>
+  </div>
+  <div class="stats2">
+    <div><div class="kicker">How hard</div><div class="big" style="margin-top:8px">19 years</div><div class="cap">of work behind NVIDIA's GPU software platform, CUDA, launched in 2007.</div></div>
+    <div><div class="kicker">What they spend</div><div class="big gold" style="margin-top:8px">$18.5 billion</div><div class="cap">NVIDIA's research and development spend in a single year.</div><div class="src">NVIDIA 10-K, fiscal 2026</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--gold)">My POV · 01 of 08</div><div class="rule"></div></div>
+  <div class="was"><span class="stamp">01</span><span class="txt">Make AI's engine code faster than the code Big Tech ships.</span></div>
+  <div class="tname">Ruppein</div>
+  <div class="trole">Our AI engine code</div>
+  <div class="now"><span class="w">Now possible.</span><span class="rule" style="background:var(--line)"></span></div>
+  <p class="plain">We wrote our own engine code for AI. It runs up to twice as fast as the version PyTorch ships, uses far less memory, and gives exactly the same results.</p>
+  <div class="grid g3">
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px">2.05×</div><div class="lab">faster than PyTorch's own fused code</div><div class="cap">1.52–2.05× across settings</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big gold" style="margin-top:26px">−82%</div><div class="lab">memory at long context</div><div class="cap">12.51 GB → 2.28 GB at 32k tokens</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px">3.5×</div><div class="lab">faster output layer on NVIDIA</div><div class="cap">115 ms → 33 ms per step</div></div>
+  </div>
+  <div class="chart">
+    <h4><span>Memory used as context grows (GB)</span><span class="tag m">Measured</span></h4>
+    <div class="pair"><div>2k</div><div class="bars"><div class="b" style="width:8.3%;background:#BDB29B"><span>1.04</span></div><div class="b" style="width:5.6%;background:var(--gold2)"><span>0.70</span></div></div></div>
+    <div class="pair"><div>4k</div><div class="bars"><div class="b" style="width:14.8%;background:#BDB29B"><span>1.85</span></div><div class="b" style="width:8.2%;background:var(--gold2)"><span>1.02</span></div></div></div>
+    <div class="pair"><div>8k</div><div class="bars"><div class="b" style="width:27.7%;background:#BDB29B"><span>3.46</span></div><div class="b" style="width:14.1%;background:var(--gold2)"><span>1.77</span></div></div></div>
+    <div class="pair"><div>16k</div><div class="bars"><div class="b" style="width:50.9%;background:#BDB29B"><span>6.37</span></div><div class="b" style="width:17.4%;background:var(--gold2)"><span>2.18</span></div></div></div>
+    <div class="pair"><div>32k</div><div class="bars"><div class="b" style="width:85%;background:#BDB29B"><span>12.51</span></div><div class="b" style="width:15.5%;background:var(--gold2)"><span>2.28</span></div></div></div>
+    <div class="legend"><span><i style="background:#BDB29B"></i>Standard</span><span><i style="background:var(--gold2)"></i>Ruppein</span></div>
+  </div>
+  <div class="checks"><span>Same accuracy: loss 1.0971 vs 1.0973</span><span>Runs on NVIDIA and Apple</span></div>
+  <div class="basis">Speed: forward + backward vs PyTorch's fused norm, NVIDIA DGX Spark. Memory: output layer (norm, head and loss), vocab 32,768, bf16, Apple M5. Output layer on NVIDIA: 115 → 33 ms and 6.0 → 0.33 GB per step, DGX Spark.</div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ═════ 02 ═════ -->
+<section class="page">
+  <div class="ghost">02</div>
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV · 02 of 08</div><div class="rule"></div></div>
+  <div style="margin-top:34px"><span class="stamp bigstamp">IMPOSSIBLE</span></div>
+  <div class="imp-h">Replace the method that has trained almost every AI since 2014.</div>
+  <p class="imp-why">Adam is the standard way to train AI models, and has been since it was published in 2014. Research labs have tried for over a decade to find something clearly better. It is still the default.</p>
+  <div class="nolist">
+    <div class="k">Why everyone said no</div>
+    <div class="no"><span>The default for 12 years<small>Through every generation of AI, from small models to the largest.</small></span></div>
+    <div class="no"><span>Many challengers, few replacements<small>New methods are proposed every year; most never become the standard.</small></span></div>
+    <div class="no"><span>A wrong choice wastes whole training runs<small>So labs stay with what they know.</small></span></div>
+  </div>
+  <div class="stats2">
+    <div><div class="kicker">How hard</div><div class="big" style="margin-top:8px">12 years</div><div class="cap">as the industry default, through every generation of AI.</div></div>
+    <div><div class="kicker">What it costs</div><div class="big gold" style="margin-top:8px">$1 billion+</div><div class="cap">projected cost of the largest AI training runs by 2027. Costs grow 2–3× every year.</div><div class="src">Epoch AI</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--gold)">My POV · 02 of 08</div><div class="rule"></div></div>
+  <div class="was"><span class="stamp">02</span><span class="txt">Replace the method that has trained almost every AI since 2014.</span></div>
+  <div class="tname">Ruppem</div>
+  <div class="trole">Our optimiser</div>
+  <div class="now"><span class="w">Now possible.</span><span class="rule" style="background:var(--line)"></span></div>
+  <p class="plain">Ruppem trains AI models to the same quality as Adam with almost three times less data, and needs far less memory to do it.</p>
+  <div class="grid g3">
+    <div class="card hero"><span class="tag m">Measured</span><div class="big gold" style="margin-top:26px">2.90×</div><div class="lab">less data to reach Adam's quality</div><div class="cap">95% confidence: 2.79–3.01×</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px">+20.5%</div><div class="lab">faster training, end to end</div><div class="cap">tokens per second vs PyTorch's fused AdamW</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px">−26%</div><div class="lab">peak training memory</div><div class="cap">31.58 GB → 23.35 GB</div></div>
+  </div>
+  <div class="chart">
+    <h4><span>Optimiser memory · bytes per parameter (lower is better)</span><span class="tag m">Measured</span></h4>
+    <div class="bar us"><div>Ruppem</div><div class="track"><div class="fill" style="width:15.4%"></div></div><div class="v">3.0</div></div>
+    <div class="bar"><div>Muon</div><div class="track"><div class="fill" style="width:30.8%"></div></div><div class="v">6.0</div></div>
+    <div class="bar"><div>AdamW</div><div class="track"><div class="fill" style="width:41%"></div></div><div class="v">8.0</div></div>
+    <div class="bar"><div>SOAP</div><div class="track"><div class="fill" style="width:100%"></div></div><div class="v">19.5</div></div>
+    <div class="cap" style="margin-top:8px">Low-memory mode: 2.0 bytes per parameter, 75% less than AdamW.</div>
+  </div>
+  <div class="checks"><span>Beats Lion by 0.20 nats</span><span>Beats Adafactor by 0.19 nats</span><span>Runs on NVIDIA and Apple</span></div>
+  <div class="basis">25M-parameter model, 100M tokens, fresh seeds 20–22, NVIDIA DGX Spark. Data efficiency = tokens needed to reach AdamW's final loss. Peak memory measured on a larger model. Larger-scale runs in progress.</div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ═════ 03 ═════ -->
+<section class="page">
+  <div class="ghost">03</div>
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV · 03 of 08</div><div class="rule"></div></div>
+  <div style="margin-top:34px"><span class="stamp bigstamp">IMPOSSIBLE</span></div>
+  <div class="imp-h">Train the same AI in less than half the time, with a third of the energy.</div>
+  <p class="imp-why">Training AI is slow and burns huge amounts of power. Whole infrastructure teams work to squeeze out a few percent. Cutting the time by more than half, with no loss in quality, is not what anyone expects.</p>
+  <div class="nolist">
+    <div class="k">Why everyone said no</div>
+    <div class="no"><span>Training runs take months<small>On thousands of GPUs at the biggest labs.</small></span></div>
+    <div class="no"><span>Whole teams fight for a few percent<small>Every small speed-up is hard-won.</small></span></div>
+    <div class="no"><span>Faster usually means worse<small>Shortcuts in training normally cost quality.</small></span></div>
+  </div>
+  <div class="stats2">
+    <div><div class="kicker">How hard</div><div class="big" style="margin-top:8px">Months</div><div class="cap">for a single frontier training run, on thousands of GPUs.</div></div>
+    <div><div class="kicker">What they spend</div><div class="big gold" style="margin-top:8px">$650 billion+</div><div class="cap">planned by Amazon, Alphabet, Meta and Microsoft on AI infrastructure in 2026 alone.</div><div class="src">Company guidance, as reported by Bloomberg and the FT, 2026</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--gold)">My POV · 03 of 08</div><div class="rule"></div></div>
+  <div class="was"><span class="stamp">03</span><span class="txt">Train the same AI in less than half the time, with a third of the energy.</span></div>
+  <div class="tname" style="font-size:92px">Vertex Training<br>System</div>
+  <div class="trole">Our full training stack</div>
+  <div class="now"><span class="w">Now possible.</span><span class="rule" style="background:var(--line)"></span></div>
+  <p class="plain">A model trained with our system reached in 2.46 hours the same quality the standard setup needed 6 hours for, using about a third of the energy.</p>
+  <div class="grid g2">
+    <div class="card hero"><span class="tag m">Measured</span><div class="big gold" style="margin-top:26px;font-size:76px">2.45×</div><div class="lab">faster to the same quality</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px;font-size:76px">≈3×</div><div class="lab">less energy</div></div>
+  </div>
+  <div class="chart">
+    <h4><span>Hours to reach the same quality</span><span class="tag m">Measured</span></h4>
+    <div class="bar"><div>Standard setup</div><div class="track" style="height:28px"><div class="fill" style="width:100%"></div></div><div class="v">6.00 h</div></div>
+    <div class="bar us"><div>Vertex system</div><div class="track" style="height:28px"><div class="fill" style="width:41%"></div></div><div class="v">2.46 h</div></div>
+  </div>
+  <div class="basis">300M-parameter model, 24-hour benchmark on NVIDIA DGX Spark, one seed per system. Standard setup: torch.compile, bf16 and AdamW. Our system combines our own kernels with public training methods; our kernels alone made it 1.19× faster.</div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ═════ 04 ═════ -->
+<section class="page">
+  <div class="ghost">04</div>
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV · 04 of 08</div><div class="rule"></div></div>
+  <div style="margin-top:34px"><span class="stamp bigstamp">IMPOSSIBLE</span></div>
+  <div class="imp-h">Teach an AI a new language without it forgetting what it knew.</div>
+  <p class="imp-why">When a trained model learns something new, it starts to lose old skills. Scientists named this "catastrophic forgetting" in 1989. Today's usual fix is to train again on everything, the most expensive step in AI.</p>
+  <div class="nolist">
+    <div class="k">Why everyone said no</div>
+    <div class="no"><span>Named in 1989, still open<small>Thirty-seven years of research, still unsolved in everyday AI.</small></span></div>
+    <div class="no"><span>New learning overwrites old learning<small>The more you teach, the more it forgets.</small></span></div>
+    <div class="no"><span>The usual fix: train again on everything<small>The slowest and most expensive step there is.</small></span></div>
+  </div>
+  <div class="stats2">
+    <div><div class="kicker">How hard</div><div class="big" style="margin-top:8px">37 years</div><div class="cap">since the problem was first described.</div><div class="src">McCloskey &amp; Cohen, 1989</div></div>
+    <div><div class="kicker">What it costs</div><div class="big gold" style="margin-top:8px">$100 million+</div><div class="cap">to train one model like GPT-4, as OpenAI's CEO said in 2023.</div><div class="src">Sam Altman, 2023</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--gold)">My POV · 04 of 08</div><div class="rule"></div></div>
+  <div class="was"><span class="stamp">04</span><span class="txt">Teach an AI a new language without it forgetting what it knew.</span></div>
+  <div class="tname">AUGA</div>
+  <div class="trole">Our model architecture</div>
+  <div class="now"><span class="w">Now possible.</span><span class="rule" style="background:var(--line)"></span></div>
+  <p class="plain">Models built on AUGA can learn a new language later and keep everything they already knew, exactly as it was. They also beat a normal model of the same size on Python and Hindi.</p>
+  <div class="grid g3">
+    <div class="card hero"><span class="tag m">Measured</span><div class="big gold" style="margin-top:26px">0%</div><div class="lab">forgotten after adding Kannada</div><div class="cap">old knowledge stayed bit-identical</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px">2 of 2</div><div class="lab">runs won on Python and Hindi</div><div class="cap">vs a same-size normal model</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px">42.6%</div><div class="lab">of the model loaded per task</div><div class="cap">with five languages</div></div>
+  </div>
+  <div class="chart">
+    <h4><span>Forgetting after a new language was added</span><span class="tag m">Measured</span></h4>
+    <div class="bar"><div>Normal model</div><div class="track" style="height:28px;position:relative"><div class="fill" style="width:9.5%;position:absolute;left:0;top:0"></div><div style="position:absolute;left:9.5%;width:90.5%;height:100%;background:repeating-linear-gradient(90deg,#BDB29B 0 6px,#E4D9C1 6px 10px);border-radius:0 4px 4px 0"></div></div><div class="v">28–296%</div></div>
+    <div class="bar us"><div>AUGA</div><div class="track" style="height:28px"><div class="fill" style="width:0.8%"></div></div><div class="v">0%</div></div>
+  </div>
+  <div class="checks"><span>Compressed to half size with no quality loss</span></div>
+  <div class="basis">336M active / 675M total parameters vs a same-size dense model, seeds 0 and 2. Wins: about 1% lower loss on Python and Hindi on both seeds. Adding Kannada: AUGA's existing parts stayed bit-identical, while the dense model forgot 28–296% on old domains. The dense model learned Kannada itself about 5% better.</div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ═════ 05 ═════ -->
+<section class="page">
+  <div class="ghost">05</div>
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV · 05 of 08</div><div class="rule"></div></div>
+  <div style="margin-top:34px"><span class="stamp bigstamp">IMPOSSIBLE</span></div>
+  <div class="imp-h">Fix one skill inside a finished AI without breaking the rest.</div>
+  <p class="imp-why">A trained model is billions of numbers with no labels. No one can point to where one skill lives. So today you retrain the whole model and hope nothing else breaks. It often does.</p>
+  <div class="nolist">
+    <div class="k">Why everyone said no</div>
+    <div class="no"><span>Billions of unlabelled numbers<small>A model is a black box, even to the people who built it.</small></span></div>
+    <div class="no"><span>No map of where a skill lives<small>So there is nothing precise to fix.</small></span></div>
+    <div class="no"><span>Fixing one thing breaks another<small>A normal fine-tune changes everything at once.</small></span></div>
+  </div>
+  <div class="stats2">
+    <div><div class="kicker">How hard</div><div class="big" style="margin-top:8px">Billions</div><div class="cap">of numbers in a modern model, and none of them come with a label.</div></div>
+    <div><div class="kicker">What changes today</div><div class="big gold" style="margin-top:8px">100%</div><div class="cap">of a model's numbers change in a normal fine-tune, even to fix one small skill.</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--gold)">My POV · 05 of 08</div><div class="rule"></div></div>
+  <div class="was"><span class="stamp">05</span><span class="txt">Fix one skill inside a finished AI without breaking the rest.</span></div>
+  <div class="tname">AUGA Core</div>
+  <div class="trole">Our model editor</div>
+  <div class="now"><span class="w">Now possible.</span><span class="rule" style="background:var(--line)"></span></div>
+  <p class="plain">AUGA Core improves one skill inside a trained model while changing only 5% of it. It beats a normal fine-tune, and nothing else breaks.</p>
+  <div class="grid g2">
+    <div class="card hero"><span class="tag m">Measured</span><div class="big gold" style="margin-top:26px;font-size:76px">15–65%</div><div class="lab">more improvement than a full fine-tune</div><div class="cap">at the same total change, on all 3 test areas</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px;font-size:76px">≈12%</div><div class="lab">better on new Python code</div><div class="cap">held-out code the model never saw</div></div>
+  </div>
+  <div class="chart">
+    <h4><span>How much of the model changes</span><span class="tag m">Measured</span></h4>
+    <div class="bar"><div>Normal fine-tune</div><div class="track" style="height:28px"><div class="fill" style="width:100%"></div></div><div class="v">100%</div></div>
+    <div class="bar us"><div>AUGA Core</div><div class="track" style="height:28px"><div class="fill" style="width:5%"></div></div><div class="v">5%</div></div>
+  </div>
+  <div class="checks"><span>Long context kept</span><span>Looping went down</span><span>Chat and agents unchanged</span></div>
+  <div class="basis">Our 488M model with B1's held-out Python code, 3 repeats, NVIDIA DGX Spark. Both methods stopped at the same total change (KL). Coding benchmarks (MBPP, HumanEval) not yet run.</div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ═════ 06 ═════ -->
+<section class="page">
+  <div class="ghost">06</div>
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV · 06 of 08</div><div class="rule"></div></div>
+  <div style="margin-top:34px"><span class="stamp bigstamp">IMPOSSIBLE</span></div>
+  <div class="imp-h">Build your own AI models from zero, outside a big lab.</div>
+  <p class="imp-why">The AI models the world uses come from a handful of companies with giant data centres. Almost everyone else borrows theirs. Building your own, from the very first step, is seen as a big-lab job.</p>
+  <div class="nolist">
+    <div class="k">Why everyone said no</div>
+    <div class="no"><span>Only a handful of companies do it<small>Everyone else builds on top of their models.</small></span></div>
+    <div class="no"><span>Costs keep climbing<small>Training top models gets 2–3× more expensive every year.</small></span></div>
+    <div class="no"><span>Data, compute and know-how<small>All three are needed at once, and most builders have none of them.</small></span></div>
+  </div>
+  <div class="stats2">
+    <div><div class="kicker">How hard</div><div class="big" style="margin-top:8px">A handful</div><div class="cap">of companies build their own foundation models.</div></div>
+    <div><div class="kicker">What it costs</div><div class="big gold" style="margin-top:8px">2–3× a year</div><div class="cap">is how fast the cost of training top AI models has grown, for eight years.</div><div class="src">Epoch AI</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--gold)">My POV · 06 of 08</div><div class="rule"></div></div>
+  <div class="was"><span class="stamp">06</span><span class="txt">Build your own AI models from zero, outside a big lab.</span></div>
+  <div class="tname">B1 &amp; Kilobyte</div>
+  <div class="trole">Our own AI models</div>
+  <div class="now"><span class="w">Now possible.</span><span class="rule" style="background:var(--line)"></span></div>
+  <p class="plain">We trained our own AI models from scratch. B1 can read 32,000 tokens at once and still find one hidden detail 92% of the time.</p>
+  <div class="grid g3">
+    <div class="card hero"><span class="tag m">Measured</span><div class="big gold" style="margin-top:26px">92%</div><div class="lab">passkey accuracy at 32k</div><div class="cap">B1, ≈300M Python model</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px">8×</div><div class="lab">longer memory</div><div class="cap">Kilobyte: 4k → 32k tokens</div></div>
+    <div class="card hero"><span class="tag m">Measured</span><div class="big" style="margin-top:26px">0.577</div><div class="lab">Python loss</div><div class="cap">vs about 10.4 for an untrained model</div></div>
+  </div>
+  <div class="chart">
+    <h4><span>Kilobyte · loss by position (lower is better)</span><span class="tag m">Measured</span></h4>
+    <div class="pair"><div>0–4k</div><div class="bars"><div class="b" style="width:79%;background:#BDB29B"><span>2.078</span></div><div class="b" style="width:65.3%;background:var(--gold2)"><span>1.717</span></div></div></div>
+    <div class="pair"><div>4–8k</div><div class="bars"><div class="b" style="width:80.2%;background:#BDB29B"><span>2.109</span></div><div class="b" style="width:64.5%;background:var(--gold2)"><span>1.697</span></div></div></div>
+    <div class="pair"><div>8–16k</div><div class="bars"><div class="b" style="width:79.7%;background:#BDB29B"><span>2.095</span></div><div class="b" style="width:63.3%;background:var(--gold2)"><span>1.665</span></div></div></div>
+    <div class="pair"><div>16–32k</div><div class="bars"><div class="b" style="width:78.1%;background:#BDB29B"><span>2.053</span></div><div class="b" style="width:61.5%;background:var(--gold2)"><span>1.618</span></div></div></div>
+    <div class="legend"><span><i style="background:#BDB29B"></i>Before</span><span><i style="background:var(--gold2)"></i>After extending to 32k</span></div>
+  </div>
+  <div class="checks"><span>Tool calling works</span><span>Trained at 4k, 16k and 32k context</span></div>
+  <div class="basis">B1: ≈300M-parameter Python model, passkey retrieval at 32k context. Kilobyte: ≈488M parameters, context extended from 4k to 32k. Both on NVIDIA DGX Spark.</div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ═════ 07 · GPU ═════ -->
+<section class="page">
+  <div class="ghost">07</div>
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV · 07 of 08</div><div class="rule"></div></div>
+  <div style="margin-top:34px"><span class="stamp bigstamp">IMPOSSIBLE</span></div>
+  <div class="imp-h" style="font-size:62px">Design a 2 nm GPU from scratch, alone, in 24 hours.</div>
+  <p class="imp-why" style="margin-top:18px">With no GPU knowledge to begin with. No team. No huge funding. Learn it and build it from zero, in a country with no public record of anyone designing a 2 nm chip from scratch.</p>
+  <div class="nolist" style="margin-top:20px">
+    <div class="k">Why everyone said no</div>
+    <div class="no" style="padding:7px 0"><span>Alone<small>Big companies use teams of thousands of engineers for one chip.</small></span></div>
+    <div class="no" style="padding:7px 0"><span>In 24 hours<small>A modern GPU takes two to four years to design.</small></span></div>
+    <div class="no" style="padding:7px 0"><span>With no prior GPU knowledge<small>Chip designers usually train for years before they lead a design.</small></span></div>
+    <div class="no" style="padding:7px 0"><span>Without huge funding<small>One large 2 nm chip costs about $725 million to design.</small></span></div>
+    <div class="no" style="padding:7px 0;border-bottom:none"><span>In India<small>No 2 nm factory in the country yet; India's first chip plants target 28 nm and above.</small></span></div>
+  </div>
+  <div class="stats2">
+    <div><div class="kicker">How hard</div><div class="big" style="margin-top:8px">2–4 years</div><div class="cap">and thousands of engineers, for over 100 billion transistors.</div></div>
+    <div><div class="kicker">What they spend</div><div class="big gold" style="margin-top:8px">$725 million</div><div class="cap">to design one large 2 nm chip. A factory that can make it costs about $28 billion.</div><div class="src">IBS estimates</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--gold)">My POV · 07 of 08</div><div class="rule"></div></div>
+  <div class="was"><span class="stamp">07</span><span class="txt">Design a 2 nm GPU from scratch, alone, in 24 hours.</span></div>
+  <div class="tname" style="font-size:96px">Vertex GPU</div>
+  <div class="trole">Design B8B87622 · Designed in Vertex GPU Forge</div>
+  <div class="now"><span class="w">Now possible.</span><span class="rule" style="background:var(--line)"></span></div>
+  <p class="plain" style="font-size:17px">Designed alone, from scratch, in under 24 hours, starting with no GPU knowledge. In simulation, it delivers more than seven times the performance of the design tool's reference chip. Everything is ready: the circuits are built, the PDK is ready, and testing is under way.</p>
+  <div class="card hero" style="margin-top:22px;display:flex;align-items:center;gap:28px">
+    <span class="tag t">Theoretical</span>
+    <div class="big gold" style="font-size:100px">7.28×</div>
+    <div><div class="lab" style="font-size:15px;margin-top:0">performance vs the tool's reference design</div><div class="cap" style="font-size:12px">Simulated range 6.67× – 7.74× (p10 – p90)</div></div>
+  </div>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="card small"><div class="big">256 GB</div><div class="lab">memory</div><div class="cap">GDDR7</div></div>
+    <div class="card small"><div class="big">8.19 TB/s</div><div class="lab">bandwidth</div></div>
+    <div class="card small"><div class="big">212 tok/s</div><div class="lab">AI text generation</div><div class="cap">simulated LLM decode</div></div>
+    <div class="card small"><div class="big">12,283</div><div class="lab">TFLOPS at FP16</div></div>
+    <div class="card small"><div class="big">714</div><div class="lab">compute units</div></div>
+    <div class="card small"><div class="big">14</div><div class="lab">chiplets</div></div>
+  </div>
+  <div class="checks"><span>Alone</span><span>Under 24 hours</span><span>Self-taught from zero</span><span>No big funding</span></div>
+  <div class="ready">
+    <div class="rl">
+      <div class="k">Status · everything is ready</div>
+      <div class="rr"><span class="y">Design complete</span><span class="y">Circuits built</span><span class="y">PDK ready</span><span class="w">Tests under way</span></div>
+      <div class="pw">Maximum power <b>3,500 W</b></div>
+    </div>
+  </div>
+  <div class="basis">Performance and specifications are theoretical: simulated in Vertex GPU Forge against the tool's reference design. Not yet fabricated silicon. Maximum power 3,500 W (3,183 W in simulation).</div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ═════ 08 ═════ -->
+<section class="page">
+  <div class="ghost">08</div>
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">Everyone's POV · 08 of 08</div><div class="rule"></div></div>
+  <div style="margin-top:34px"><span class="stamp bigstamp">IMPOSSIBLE</span></div>
+  <div class="imp-h">Give AI a memory that grows by itself.</div>
+  <p class="imp-why">Most AI forgets you the moment a chat ends. Giving it a memory that organises itself and grows on its own is a whole product category, with companies built just for it.</p>
+  <div class="nolist">
+    <div class="k">Why everyone said no</div>
+    <div class="no"><span>Every chat starts from zero<small>The model itself keeps nothing between conversations.</small></span></div>
+    <div class="no"><span>Memory needs its own system<small>Built and run separately, around the model.</small></span></div>
+    <div class="no"><span>Companies raise fortunes just for this<small>Memory databases are a business of their own.</small></span></div>
+  </div>
+  <div class="stats2">
+    <div><div class="kicker">How hard</div><div class="big" style="margin-top:8px">Every chat</div><div class="cap">starts from zero unless a separate memory system is built around the model.</div></div>
+    <div><div class="kicker">What they raise</div><div class="big gold" style="margin-top:8px">$100 million</div><div class="cap">raised by one memory-database company, Pinecone, in a single round.</div><div class="src">Pinecone Series B, 2023</div></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--gold)">My POV · 08 of 08</div><div class="rule"></div></div>
+  <div class="was"><span class="stamp">08</span><span class="txt">Give AI a memory that grows by itself.</span></div>
+  <div class="tname">AG Database</div>
+  <div class="trole">Our AI memory · with Dynamic Memo</div>
+  <div class="now"><span class="w">Now possible.</span><span class="rule" style="background:var(--line)"></span></div>
+  <p class="plain">Our memory grows by itself as you talk. In testing, it found the right information and carried the conversation forward across turns.</p>
+  <div class="card hero" style="margin-top:24px;padding:24px 26px">
+    <span class="tag m">Measured</span>
+    <div style="display:flex;align-items:baseline;gap:18px;margin-top:6px"><div class="big gold" style="font-size:112px">2 → 5</div><div class="kicker" style="font-size:13px">entries</div></div>
+    <div class="lab" style="font-size:15px">The memory grew by itself across 3 chat turns</div>
+    <div style="display:flex;gap:12px;align-items:flex-end;height:120px;margin-top:22px">
+      <div style="flex:1;text-align:center"><div style="display:flex;flex-direction:column-reverse;gap:4px"><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i></div><div class="kicker" style="margin-top:8px;font-size:9.5px">Start</div></div>
+      <div style="flex:1;text-align:center"><div style="display:flex;flex-direction:column-reverse;gap:4px"><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:var(--gold2);display:block"></i></div><div class="kicker" style="margin-top:8px;font-size:9.5px">Turn 1</div></div>
+      <div style="flex:1;text-align:center"><div style="display:flex;flex-direction:column-reverse;gap:4px"><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:var(--gold2);display:block"></i></div><div class="kicker" style="margin-top:8px;font-size:9.5px">Turn 2</div></div>
+      <div style="flex:1;text-align:center"><div style="display:flex;flex-direction:column-reverse;gap:4px"><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:#D8CDB6;display:block"></i><i style="height:16px;border-radius:4px;background:var(--gold2);display:block"></i></div><div class="kicker" style="margin-top:8px;font-size:9.5px">Turn 3</div></div>
+    </div>
+  </div>
+  <div class="checks"><span>Retrieval correct</span><span>History carried across turns</span></div>
+  <div class="status">AG Database benchmarks under way</div>
+  <div class="basis">Measured on Dynamic Memo, the self-expanding layer of our memory stack: end-to-end test, September 2026. AG Database speed and accuracy benchmarks are in progress.</div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- ECOSYSTEM -->
+<section class="page">
+  <div class="rowrule"><div class="kicker" style="color:var(--ink)">One company · one stack</div><div class="rule"></div></div>
+  <div class="cond" style="font-size:84px;margin-top:22px">Not one breakthrough.<br><span class="gold">Eight.</span></div>
+  <p style="font-size:17px;line-height:1.55;font-weight:600;margin-top:20px;max-width:600px">From the chip to the code to the model to its memory, every layer is built in-house, and every layer works together.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px">
+    <div class="card"><div class="kicker" style="color:var(--gold)">Hardware</div><div class="lab" style="font-size:20px">Vertex GPU</div></div>
+    <div class="card"><div class="kicker" style="color:var(--gold)">Engine code</div><div class="lab" style="font-size:20px">Ruppein</div></div>
+    <div class="card"><div class="kicker" style="color:var(--gold)">Training</div><div class="lab" style="font-size:20px">Ruppem · Vertex Training System</div></div>
+    <div class="card"><div class="kicker" style="color:var(--gold)">Architecture</div><div class="lab" style="font-size:20px">AUGA · AUGA Core</div></div>
+    <div class="card"><div class="kicker" style="color:var(--gold)">Models</div><div class="lab" style="font-size:20px">B1 · Kilobyte · Point One</div></div>
+    <div class="card"><div class="kicker" style="color:var(--gold)">Memory &amp; tools</div><div class="lab" style="font-size:20px">AG Database · Silver IDE</div></div>
+  </div>
+  <div class="rowrule" style="margin-top:40px"><div class="kicker" style="color:var(--ink)">In the lab now</div><div class="rule"></div></div>
+  <div style="margin-top:14px;font-size:15px;line-height:1.5;font-weight:600">
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1.5px solid var(--soft)"><span>Vertex GPU</span><span style="color:var(--mute)">testing under way</span></div>
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1.5px solid var(--soft)"><span>AG Database</span><span style="color:var(--mute)">speed and accuracy benchmarks</span></div>
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1.5px solid var(--soft)"><span>AUGA Core on B1</span><span style="color:var(--mute)">coding benchmarks</span></div>
+    <div style="display:flex;justify-content:space-between;padding:10px 0"><span>Ruppem</span><span style="color:var(--mute)">larger-scale runs</span></div>
+  </div>
+  <div class="foot"><span>Vertex Interactive</span><span>Confidential</span></div>
+</section>
+
+<!-- CLOSING -->
+<section class="page" style="padding-top:120px">
+  <div class="rowrule"><div class="serif" style="font-size:30px;font-weight:500">Everyone's POV,</div><div class="rule"></div></div>
+  <div class="cond" style="font-size:118px;margin-top:6px;font-stretch:62.5%;color:var(--mute);text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:6px">IMPOSSIBLE</div>
+  <div class="rowrule" style="margin-top:26px"><div class="serif" style="font-size:30px;font-weight:500">My POV,</div><div class="rule"></div></div>
+  <div style="margin-top:10px"><svg class="word" width="640" height="130" viewBox="0 0 640 130"><defs><linearGradient id="g2" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#A8740F"/><stop offset=".45" stop-color="#E3B33E"/><stop offset=".72" stop-color="#B98516"/><stop offset="1" stop-color="#8E6209"/></linearGradient></defs><text x="0" y="112" textLength="640" lengthAdjust="spacingAndGlyphs" fill="url(#g2)" style="font-family:'Noto Serif Display',serif;font-weight:800;font-stretch:62.5%;font-size:130px">I-M-POSSIBLE</text></svg></div>
+  <div class="italic" style="font-size:34px;line-height:1.3;margin-top:36px">When everyone said you cannot,<br>I did, even better.</div>
+  <div style="width:230px;height:2px;background:var(--line);margin-top:24px"></div>
+  <div style="display:flex;align-items:flex-end;gap:26px;margin-top:36px">
+    <div style="flex:1">
+      <div class="cond" style="font-size:40px">Vertex Interactive</div>
+      <div class="kicker" style="color:var(--gold);margin-top:10px;font-size:12px">Building India's AI future</div>
+      <div style="font-size:15px;font-weight:700;margin-top:16px">Karan Gowda N (Leo) · Founder, age 17</div>
+      <div style="font-size:12px;color:var(--mute);margin-top:4px;letter-spacing:3px">WWW.VERTEXINTERACTIVE.IN</div>
+    </div>
+    <div style="text-align:center;border:2px solid var(--ink);border-radius:16px;background:#fff;padding:14px 22px 12px">
+      <div class="kicker" style="color:var(--ink)">Built at</div>
+      <div class="cond gold" style="font-size:92px;line-height:0.9;margin-top:4px">17</div>
+      <div class="kicker" style="margin-top:6px">in India</div>
+    </div>
+  </div>
+  <div style="position:absolute;left:64px;right:64px;bottom:58px;font-size:9px;line-height:1.55;color:var(--mute);border-top:1.5px solid var(--soft);padding-top:10px">
+    <b style="color:var(--ink2)">Sources for industry figures.</b> NVIDIA Form 10-K, fiscal 2026 (R&amp;D $18.5B). Epoch AI, "How much does it cost to train frontier AI models?" (cost growth 2–3× per year; largest runs over $1B by 2027). Bloomberg and Financial Times reporting on 2026 capex guidance from Amazon, Alphabet, Meta and Microsoft. Sam Altman, 2023 (GPT-4 training over $100M). McCloskey &amp; Cohen, 1989 (catastrophic interference). IBS estimates via Tom's Hardware (2 nm design $725M; 2 nm fab ≈$28B). Pinecone Series B, 2023 ($100M).<br>
+    <b style="color:var(--ink2)">Vertex results</b> are from internal test reports, September–November 2026, and are marked Measured or Theoretical. GPU design time and conditions as stated by the founder. Confidential: do not share before the patent filing.
+  </div>
+</section>
+</div>
+<script type="module" src="book.js"></script>
+</body>
+</html>

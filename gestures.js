@@ -3,6 +3,7 @@
 //
 // Each gesture has its own hand shape, so they do not overlap:
 //   ✌  two fingers (index + middle) ............ pause / play
+//      two fingers, swiped left / right ........ next / previous page (in the AR book)
 //   👌 double pinch (thumb + index, twice) ...... enter zoom mode
 //        in zoom mode: spread / close the pinch .. resize
 //        open hand ............................... confirm the size, leave zoom mode
@@ -14,6 +15,7 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const OPEN_HOLD = 1.2;    // seconds to fill the full-view ring
 export const TWO_HOLD = 0.3;     // seconds two fingers must be shown to pause / play
 export const THUMB_HOLD = 0.4;   // seconds a thumbs up must be held to hide / show pop-ups
+export const SWIPE = 0.13;       // how far (fraction of the camera image) two fingers move to count as a swipe
 
 export function features(lm) {
   const s = dist(lm[0], lm[9]) || 1e-3;                        // hand size: wrist → middle knuckle
@@ -35,7 +37,7 @@ export function features(lm) {
 
 export class Gestures {
   /** on: { hand(pose|null), zoomMode(on), zoomStart(), zoom(factor), zoomConfirm(), toggle(),
-   *        dragStart(), drag(dx, dy), dragEnd(), openProgress(p, palm), open(), thumbsUp() } */
+   *        dragStart(), drag(dx, dy), dragEnd(), openProgress(p, palm), open(), thumbsUp(), swipe("left"|"right") } */
   constructor(on) {
     this.on = on;
     this.pose = "none";
@@ -67,6 +69,7 @@ export class Gestures {
     this.on.hand?.(pose === "none" ? null : pose);
     if (pose === "pinch") { this.closed = f.pinch < 0.25; this.r0 = Math.max(f.pinch, 0.3); this.hist = []; this.on.zoomStart?.(); }
     if (pose === "fist") { this.p0 = { ...f.palm }; this.on.dragStart?.(); }
+    if (pose === "two") { this.x0 = f.palm.x; this.swiped = false; }
     if (pose === "open" && this.zoomMode) {
       // open hand confirms the size (as it was just before the hand opened);
       // it must be lowered before it can start the full-view ring
@@ -93,6 +96,11 @@ export class Gestures {
     if (this.pose === "pinch" && f.pose === "pinch") this._pinch(f, t);
     else if (this.pose === "fist" && this.p0) this.on.drag?.(f.palm.x - this.p0.x, f.palm.y - this.p0.y);
     else if (this.pose === "two") {
+      // a sideways swipe with two fingers turns the page; it never also pauses
+      if (!this.swiped && f.pose === "two" && Math.abs(f.palm.x - this.x0) > SWIPE) {
+        this.swiped = true; this.fired = true;
+        this.on.swipe?.(f.palm.x < this.x0 ? "left" : "right");
+      }
       if (!this.fired && t - this.since >= TWO_HOLD && t - this.lastToggle > 0.8) {
         this.fired = true; this.lastToggle = t; this.on.toggle?.();
       }
