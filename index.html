@@ -96,6 +96,19 @@
   /* thumbs up: clean view, every pop-up hidden */
   body.clean #help, body.clean #gest, body.clean #controls, body.clean #pill, body.clean #hint, body.clean #fullIcons { opacity: 0 !important; pointer-events: none !important; }
 
+  /* GPU page mode */
+  #gpuBar { position: fixed; z-index: 14; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 10px; padding: 8px; border-radius: 40px; background: rgba(17,17,17,.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity .35s; }
+  #gpuBar.hide, #gpuNote.hide { opacity: 0; pointer-events: none; }
+  #gpuBar button { height: 44px; padding: 0 18px; border-radius: 30px; border: none; background: rgba(255,255,255,.12); color: #fff; font: 700 13px "Poppins", sans-serif; cursor: pointer; white-space: nowrap; }
+  #gpuBar button.on { background: var(--gold2); color: #111; }
+  #gpuNote { position: fixed; z-index: 13; left: 16px; right: 16px; bottom: calc(90px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; padding: 8px 12px; border-radius: 12px; background: rgba(17,17,17,.6); color: rgba(255,255,255,.85); font-size: 10.5px; line-height: 1.45; font-weight: 500; text-align: center; transition: opacity .35s; }
+  body.clean #gpuBar, body.clean #gpuNote { opacity: 0 !important; pointer-events: none !important; }
+  @media (orientation: landscape) {
+    #gpuBar { left: auto; right: calc(12px + env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); transform: none; padding: 6px; gap: 6px; }
+    #gpuBar button { height: 38px; padding: 0 14px; font-size: 12px; }
+    #gpuNote { left: calc(12px + env(safe-area-inset-left)); right: auto; bottom: calc(12px + env(safe-area-inset-bottom)); max-width: 42vw; margin: 0; text-align: left; font-size: 10px; }
+  }
+
   /* closing card, after the film ends */
   #thanks { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .6s ease; }
   #thanks.show { opacity: 1; pointer-events: auto; }
@@ -152,6 +165,10 @@
   <button id="bFull">Full</button>
 </div>
 
+<!-- GPU page mode -->
+<div id="gpuNote" class="hide">Vertex GPU: theoretical, simulated in Vertex GPU Forge; not yet fabricated silicon. NVIDIA H200: published spec (SXM); FP16 is NVIDIA's headline figure, with sparsity. Efficiency = FP16 TFLOPS ÷ maximum power (3,500 W vs 700 W).</div>
+<div id="gpuBar" class="hide"><button id="gReplay">Replay</button><button id="gInfo">Sources</button><button id="gFilm" class="on">Watch the film</button></div>
+
 <!-- closing card -->
 <div id="thanks" aria-hidden="true">
   <div class="card" role="dialog" aria-label="Thank you">
@@ -169,6 +186,7 @@
       <a class="btn" id="saveContact" href="assets/contact.vcf" target="_blank" rel="noopener"><span class="dot"></span>Save contact</a>
       <button class="btn ghost" id="watchAgain">Watch again</button>
     </div>
+    <button class="btn ghost" id="seeGpu" style="margin-top:10px;width:100%;justify-content:center">See the GPU in 3D</button>
   </div>
 </div>
 
@@ -203,6 +221,7 @@ import * as THREE from "three";
 import { MindARThree } from "./lib/mindar/mindar-image-three.prod.js";
 import { FilesetResolver, HandLandmarker } from "./lib/mediapipe/vision_bundle.js";
 import { Gestures, OPEN_HOLD } from "./gestures.js";
+import { makeGpu } from "./gpu.js";
 
 const $ = (id) => document.getElementById(id);
 const film = $("film");
@@ -343,7 +362,7 @@ function updateListener() {
   if (panner.positionX) { panner.positionX.value = _wp.x; panner.positionY.value = _wp.y; panner.positionZ.value = _wp.z; }
   else panner.setPosition(_wp.x, _wp.y, _wp.z);
 }
-window.__arDebug = () => ({ audio: actx && actx.state, spatial, filmGain: filmGain ? +filmGain.gain.value.toFixed(2) : null, muted: film.muted, cues: cues.length, phase, prog: +prog.toFixed(2), hands: !!hands, zoom: +zoom.toFixed(2), immersive });
+window.__arDebug = () => ({ gpuTracking, gZoom, gS: gpu && +gpu.stage.scale.x.toFixed(3), gSP: SP.toArray().map((v) => +v.toFixed(2)), gT: gpu && +(now() - (gpu.t0 || 0)).toFixed(1), audio: actx && actx.state, spatial, filmGain: filmGain ? +filmGain.gain.value.toFixed(2) : null, muted: film.muted, cues: cues.length, phase, prog: +prog.toFixed(2), hands: !!hands, zoom: +zoom.toFixed(2), immersive });
 function filmHaptics() {
   if (!cues.length || film.paused) return;
   const t = film.currentTime;
@@ -397,7 +416,100 @@ function buildScene() {
 
   anchor.onTargetFound = () => { tracking = true; if (phase === "scan") { phase = "found"; tFound = now(); } };
   anchor.onTargetLost = () => { tracking = false; };
+
+  // second target: the GPU page comes alive in 3D
+  anchorG = mindar.addAnchor(1);
+  gpu = makeGpu(THREE, { buzz, renderer: mindar.renderer });
+  world.add(gpu.page, gpu.stage, gpu.lights);
+  gpu.page.visible = gpu.stage.visible = false;
+  anchorG.onTargetFound = () => { gpuTracking = true; if (phase === "scan" && !skipGpu) startGpu(); };
+  anchorG.onTargetLost = () => { gpuTracking = false; skipGpu = false; };
 }
+
+// ───────── GPU page mode
+let anchorG = null, gpu = null, gpuTracking = false, gpuSampled = false, gZoom = 1, skipGpu = false;
+const GP = new THREE.Vector3(), GQ = new THREE.Quaternion(); let gScale = 1;
+const SP = new THREE.Vector3(), SQ = new THREE.Quaternion();
+function startGpu() {
+  phase = "gpu"; gpuSampled = false; gZoom = 1;
+  $("scan").classList.add("hide");
+  hint(null); hidePill();
+  gpu.page.visible = gpu.stage.visible = true;
+  gpu.start(now());
+}
+function gpuTick(t) {
+  if (gpuTracking) {
+    _m.copy(anchorG.group.matrix); _m.decompose(_p, _q, _s);
+    const k = _s.x || 1;
+    _p.applyQuaternion(qCam); _q.premultiply(qCam);
+    if (!gpuSampled) { GP.copy(_p); GQ.copy(_q); gScale = k; }
+    else { GP.lerp(_p, 0.2); GQ.slerp(_q, 0.2); gScale += (k - gScale) * 0.2; }
+    // stage: stands on the page's far edge, upright, facing the reader
+    const py = new THREE.Vector3(0, 1, 0).applyQuaternion(GQ), pn = new THREE.Vector3(0, 0, 1).applyQuaternion(GQ);
+    let z, base;
+    if (Math.abs(pn.y) > 0.55) {                       // page lying on a table
+      const fwd = py.clone().setY(0); if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1); fwd.normalize();
+      z = fwd.clone().negate();
+      base = GP.clone().addScaledVector(py, 0.8 * gScale);
+    } else {                                            // page held up
+      z = pn.clone().setY(0); if (z.lengthSq() < 1e-6) z.set(0, 0, 1); z.normalize();
+      base = GP.clone().addScaledVector(py, 0.8 * gScale).addScaledVector(z, 0.05 * gScale);
+    }
+    if (!gpuSampled) { SP.copy(base); gpuSampled = true; } else SP.lerp(base, 0.15);
+  }
+  if (!gpuSampled) return;
+  // the board faces you like an easel (leans back towards the phone), so it is never seen edge-on
+  {
+    const z = SP.clone().negate().normalize();
+    const x = new THREE.Vector3(0, 1, 0).cross(z); if (x.lengthSq() < 1e-6) x.set(1, 0, 0); x.normalize();
+    const y = z.clone().cross(x);
+    SQ.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  }
+  if (!gpuSampled) return;
+  gpu.page.position.copy(GP); gpu.page.quaternion.copy(GQ); gpu.page.scale.setScalar(gScale);
+  // size the board to the phone's view: it fills the width (or the height, when the phone is sideways)
+  const pm = mindar.camera.projectionMatrix.elements, d = SP.length() || 1;
+  const fitW = 0.9 * (2 * d / pm[0]) / (gpu.size.BW * gpu.size.STAGE), fitH = 0.8 * (2 * d / pm[5]) / (gpu.size.BH * gpu.size.STAGE);
+  gpu.stage.position.copy(SP); gpu.stage.quaternion.copy(SQ); gpu.stage.scale.setScalar(Math.min(fitW, fitH) * gZoom);
+  const ev = gpu.update(t);
+  if (ev.found) {
+    pill("GPU page found ✓", true); buzz([25, 60, 25]);
+    hint("Lift your phone a little to see it all · turn it sideways for a bigger view");
+    setTimeout(() => { if (phase === "gpu") hidePill(); }, 3500);
+  }
+  if (ev.done) {
+    hint(null); pill("Pinch the screen to zoom", true);
+    setTimeout(() => { if (phase === "gpu") hidePill(); }, 4000);
+    $("gpuBar").classList.remove("hide"); showGpuNote();
+  }
+}
+function leaveGpu() {
+  gpu.page.visible = gpu.stage.visible = false;
+  $("gpuBar").classList.add("hide"); $("gpuNote").classList.add("hide");
+}
+// back to scanning (from the GPU page or from the end of the film)
+function rescan(text) {
+  leaveGpu();
+  if (phase === "end" || phase === "play") { film.pause(); pageGroup.visible = false; if (immersive) setImmersive(false); }
+  phase = "scan"; tick.said = false; tick.step = 0; sampled = false; prog = 0; tracking = false; gpuTracking = false;
+  coverMesh.visible = glowMesh.visible = sweepMesh.visible = true;
+  coverMesh.material.opacity = 0; filmMesh.material.opacity = 0; frameMesh.material.opacity = 0;
+  filmMesh.material.transparent = true; filmMesh.material.needsUpdate = true; zoom = zoomTarget = 1;
+  for (const id of ["controls", "help", "gest"]) $(id).classList.add("hide");
+  hctx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+  $("thanks").classList.remove("show");
+  // MindAR only reports "found" when a page goes from hidden to seen: start both pages as hidden again
+  for (const an of mindar.anchors) { an.visible = false; an.group.visible = false; }
+  try { if (!mindar.controller.processingVideo) mindar.controller.processVideo(mindar.video); } catch (e) {}
+  $("scan").classList.remove("hide");
+  hint(text); pill("Scanning…");
+}
+// pinch on the screen to zoom the GPU board
+let pinch0 = 0, zoom0 = 1;
+const tdist = (e) => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+window.addEventListener("touchstart", (e) => { if (phase === "gpu" && e.touches.length === 2) { pinch0 = tdist(e); zoom0 = gZoom; } }, { passive: true });
+window.addEventListener("touchmove", (e) => { if (phase === "gpu" && e.touches.length === 2 && pinch0) gZoom = Math.min(2.5, Math.max(0.5, zoom0 * tdist(e) / pinch0)); }, { passive: true });
+window.addEventListener("touchend", (e) => { if (e.touches.length < 2) pinch0 = 0; }, { passive: true });
 
 // ───────── flight state
 let phase = "idle";        // idle → scan → found → fly → land → play
@@ -467,6 +579,7 @@ function tick() {
   if (phase === "play" || phase === "land") filmHaptics();
   updateScreen();
   detectHands(performance.now());
+  if (phase === "gpu") { gpuTick(t); return; }
 
   if (phase === "found" || (phase === "scan" && tracking)) {
     if (tracking) samplePagePose();
@@ -597,6 +710,13 @@ function watchAgain() {
 }
 film.addEventListener("ended", showThanks);
 $("watchAgain").onclick = watchAgain;
+$("seeGpu").onclick = () => rescan("Turn to the GPU page (07) and point down at it");
+$("gReplay").onclick = () => { $("gpuBar").classList.add("hide"); $("gpuNote").classList.add("hide"); gpu.replay(now()); };
+let noteT = 0;
+function showGpuNote() { $("gpuNote").classList.remove("hide"); $("gInfo").classList.add("on"); clearTimeout(noteT); noteT = setTimeout(() => { $("gpuNote").classList.add("hide"); $("gInfo").classList.remove("on"); }, 7000); }
+$("gInfo").onclick = () => { if ($("gpuNote").classList.contains("hide")) showGpuNote(); else { clearTimeout(noteT); $("gpuNote").classList.add("hide"); $("gInfo").classList.remove("on"); } };
+$("gFilm").onclick = () => { skipGpu = true; rescan("Now point down at the cover"); };   // ignore the GPU page until it leaves the view
+window.__arFreeze = () => { anchorG.onTargetLost(); try { mindar.controller.stopProcessVideo(); } catch (e) {} };   // for automated tests
 window.__arEnd = () => { film.currentTime = Math.max(0, film.duration - 1.5); };   // for automated tests
 
 // ───────── the floating screen: where it is, how big, moved by hand gestures
@@ -762,7 +882,7 @@ async function startAR() {
   try {
     mindar = new MindARThree({
       container: $("container"),
-      imageTargetSrc: "./assets/cover.mind",
+      imageTargetSrc: "./assets/targets.mind",
       uiLoading: "no", uiScanning: "no", uiError: "no",
       filterMinCF: 0.0001, filterBeta: 0.001,
       missTolerance: 8, warmupTolerance: 3,
@@ -776,9 +896,17 @@ async function startAR() {
     return;
   }
   phase = "scan";
+  window.__mindar = mindar;   // for automated tests
+  // MindAR's matcher stops at the first target that looks close, so with two pages it could
+  // never find the second one. While scanning, each camera frame looks for one page, taking turns.
+  const ctl = mindar.controller, upd = ctl.onUpdate;
+  ctl.onUpdate = (d) => {
+    if (d.type === "processDone") ctl.interestedTargetIndex = phase === "scan" ? (ctl.interestedTargetIndex === 0 ? 1 : 0) : phase === "gpu" ? 1 : 0;
+    upd(d);
+  };
   loadHands();
   $("scan").classList.remove("hide");
-  hint("Hold your phone above the cover and point down at it");
+  hint("Point down at the cover, or at the GPU page (07)");
   pill("Scanning the cover…");
   const { renderer } = mindar;
   renderer.setAnimationLoop(() => { tick(); renderer.render(world, cam); });
