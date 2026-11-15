@@ -34,7 +34,13 @@ function splitWords(el, cls) {
 pages.forEach((p) => {
   const shade = document.createElement("div"); shade.className = "shade"; p.appendChild(shade);
   if (p.classList.contains("cover")) { const s = document.createElement("div"); s.className = "sheen"; p.appendChild(s); }
-  p.querySelectorAll(".imp-h").forEach((el) => splitWords(el, "wd"));
+  p.querySelectorAll(".imp-h, .plain, .imp-why").forEach((el) => splitWords(el, "wd"));
+  // what the page is about: picks the animation beside the page
+  const name = (p.querySelector(".tname")?.textContent || "").trim();
+  p.dataset.kind = p.classList.contains("cover") ? "cover"
+    : p.querySelector(".imp-h") ? "impossible"
+    : { "Ruppein": "kernel", "Ruppem": "optimizer", "Vertex Training System": "training", "AUGA": "auga", "AUGA Core": "core", "B1 & Kilobyte": "models", "Vertex GPU": "gpu", "AG Database": "memory" }[name]
+    || (/Eight things/.test(p.textContent) ? "list" : /Not one breakthrough/.test(p.textContent) ? "eco" : /Built at/.test(p.textContent) ? "closing" : "dust");
   p.querySelectorAll(":scope > .cond").forEach((el) => { if (!/line-through/.test(el.getAttribute("style") || "")) splitWords(el, "wd"); });
   p.querySelectorAll(".tname").forEach((el) => splitWords(el, "ch"));
   // strike-throughs that draw: the old claim, and the big IMPOSSIBLE on the closing page
@@ -81,8 +87,9 @@ function play(p) {
   p.querySelectorAll(".ghost").forEach((el) => delay(el, 0));
   p.querySelectorAll(".stamp").forEach((el) => { const ms = when(el) + 140; delay(el, ms); later(ms + 180, () => post({ type: "thump" })); });
   p.querySelectorAll(".wd, .ch").forEach((el) => {
-    const host = el.closest(".imp-h, .tname, .cond"); const list = [...host.querySelectorAll(".wd, .ch")];
-    delay(el, when(host) + list.indexOf(el) * (el.classList.contains("ch") ? 40 : 70));
+    const host = el.closest(".imp-h, .tname, .cond, .plain, .imp-why"); const list = [...host.querySelectorAll(".wd, .ch")];
+    const gap = el.classList.contains("ch") ? 40 : host.matches(".plain, .imp-why") ? 22 : 70;
+    delay(el, when(host) + list.indexOf(el) * gap);
   });
   p.querySelectorAll(".rule").forEach((el) => delay(el, when(el) + 80));
   p.querySelectorAll(".tag").forEach((el) => delay(el, when(el) + 250));
@@ -95,6 +102,7 @@ function play(p) {
     const m = el.textContent.match(MONEY);
     if (m) later(start + 200, () => moneyRain(p, el, m));
   });
+  post({ type: "kind", kind: p.dataset.kind });
   void p.offsetWidth;                           // restart the CSS animations
   p.classList.add("play");
 }
@@ -183,28 +191,32 @@ function show(i) {
   pages.forEach((p, j) => { p.classList.toggle("on", j === i); p.classList.remove("top", "turn-out", "turn-in"); p.style.zIndex = j === i ? 2 : ""; });
   cur = i; play(pages[i]); post({ type: "page", i, n: N });
 }
+let pending = null, dest = -1;
+function done() { busy = false; if (pending != null) { const j = pending; pending = null; go(j); } }
 function go(i) {
-  if (busy || i < 0 || i >= N || i === cur) return;
+  if (i < 0 || i >= N || i === cur) return;
+  if (busy) { pending = i; return; }
   if (cur < 0) return show(i);
-  busy = true; post({ type: "turn" });
+  busy = true; dest = i; post({ type: "turn" });
   const a = pages[cur], b = pages[i], fwd = i > cur;
   if (fwd) {
     // the current page swings away; the next one is underneath and starts its own animation
     b.classList.add("on"); b.style.zIndex = 1; play(b);
     a.style.zIndex = 3; a.classList.add("turn-out");
-    setTimeout(() => { a.classList.remove("on", "turn-out"); a.style.zIndex = ""; reset(a); b.style.zIndex = 2; cur = i; busy = false; post({ type: "page", i, n: N }); }, 920);
+    setTimeout(() => { a.classList.remove("on", "turn-out"); a.style.zIndex = ""; reset(a); b.style.zIndex = 2; cur = i; post({ type: "page", i, n: N }); done(); }, 920);
   } else {
     // the previous page swings back over the current one
     b.classList.add("on", "turn-in"); b.style.zIndex = 3;
     setTimeout(() => play(b), 350);
-    setTimeout(() => { a.classList.remove("on"); reset(a); b.classList.remove("turn-in"); b.style.zIndex = 2; cur = i; busy = false; post({ type: "page", i, n: N }); }, 920);
+    setTimeout(() => { a.classList.remove("on"); reset(a); b.classList.remove("turn-in"); b.style.zIndex = 2; cur = i; post({ type: "page", i, n: N }); done(); }, 920);
   }
 }
 
 addEventListener("message", (e) => {
   const m = e.data || {};
-  if (m.cmd === "next") go(cur + 1);
-  else if (m.cmd === "prev") go(cur - 1);
+  const from = busy ? (pending ?? dest) : cur;          // a turn asked for mid-turn continues from where that turn lands
+  if (m.cmd === "next") go(from + 1);
+  else if (m.cmd === "prev") go(from - 1);
   else if (m.cmd === "go") { if (cur < 0 || m.restart) { busy = false; show(m.i | 0); } else go(m.i | 0); }
 });
 document.fonts.ready.then(() => post({ type: "ready", n: N }));

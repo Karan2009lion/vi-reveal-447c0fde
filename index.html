@@ -121,6 +121,7 @@
   #bookBar.hide { opacity: 0; pointer-events: none; }
   #bookBar button { height: 44px; min-width: 44px; padding: 0 16px; border-radius: 30px; border: none; background: rgba(255,255,255,.12); color: #fff; font: 700 13px "Poppins", sans-serif; cursor: pointer; white-space: nowrap; }
   #bookBar button.on { background: var(--gold2); color: #111; }
+  #bkTimer { position: absolute; left: 22px; right: 22px; top: -9px; height: 4px; border-radius: 4px; background: var(--gold2); transform-origin: left center; transform: scaleX(0); box-shadow: 0 0 8px rgba(227,179,62,.7); }
   #bookBar .num { min-width: 64px; text-align: center; color: #fff; font: 700 13px "Poppins", sans-serif; font-variant-numeric: tabular-nums; }
   #bookFlat { position: fixed; inset: 0; z-index: 12; background: #1b150e; display: none; align-items: center; justify-content: center; overflow: hidden; }
   #bookFlat.show { display: flex; }
@@ -166,7 +167,7 @@
 </div>
 
 <!-- the PDF as a book in AR -->
-<div id="bookBar" class="hide"><button id="bkPrev" aria-label="Previous page">‹ Back</button><span class="num" id="bkNum">1 / 20</span><button id="bkNext" class="on" aria-label="Next page">Next ›</button><button id="bkClose">Close</button></div>
+<div id="bookBar" class="hide"><i id="bkTimer"></i><button id="bkPrev" aria-label="Previous page">‹ Back</button><span class="num" id="bkNum">1 / 20</span><button id="bkNext" class="on" aria-label="Next page">Next ›</button><button id="bkClose">Close</button></div>
 <div id="bookFlat"></div>
 
 <!-- closing card -->
@@ -222,6 +223,7 @@ import { MindARThree } from "./lib/mindar/mindar-image-three.prod.js";
 import { FilesetResolver, HandLandmarker } from "./lib/mediapipe/vision_bundle.js";
 import { Gestures, OPEN_HOLD } from "./gestures.js";
 import { CSS3DRenderer, CSS3DObject } from "three/addons/renderers/CSS3DRenderer.js";
+import { makeAura } from "./aura.js";
 
 const $ = (id) => document.getElementById(id);
 const film = $("film");
@@ -617,7 +619,7 @@ function watchAgain() {
 film.addEventListener("ended", showThanks);
 
 // ───────── the PDF as a book in AR: every page animates, two-finger swipes turn the pages
-let cssR = null, cssScene = null, bookObj = null, bookFrame = null, bookReady = false, bookPage = 0, bookN = 20, bookFrom = "end";
+let aura = null, cssR = null, cssScene = null, bookObj = null, bookFrame = null, bookReady = false, bookPage = 0, bookN = 20, bookFrom = "end";
 function makeFrame() {
   const f = document.createElement("iframe");
   f.src = "book.html"; f.width = 1100; f.height = 1400; f.title = "Impossible to I-M-Possible";
@@ -632,6 +634,7 @@ function initBook() {
   cssScene = new THREE.Scene();
   bookFrame = makeFrame();
   bookObj = new CSS3DObject(bookFrame); bookObj.visible = false; cssScene.add(bookObj);
+  aura = makeAura(THREE); world.add(aura.group);
   window.addEventListener("resize", () => cssR.setSize(window.innerWidth, window.innerHeight));
 }
 let lastClinkT = 0;
@@ -639,14 +642,29 @@ window.addEventListener("message", (e) => {
   if (!bookFrame || e.source !== bookFrame.contentWindow) return;
   const m = e.data || {};
   if (m.type === "ready") { bookReady = true; bookN = m.n; }
-  if (m.type === "page") { bookPage = m.i; bookN = m.n; $("bkNum").textContent = `${m.i + 1} / ${m.n}`; $("bkPrev").disabled = m.i === 0; $("bkNext").textContent = m.i === m.n - 1 ? "Done" : "Next ›"; }
+  if (m.type === "page") { bookPage = m.i; if (performance.now() >= turnReadyAt) bookPos = m.i; bookN = m.n; $("bkNum").textContent = `${m.i + 1} / ${m.n}`; $("bkPrev").disabled = m.i === 0; $("bkNext").textContent = m.i === m.n - 1 ? "Done" : "Next ›"; }
   if (m.type === "turn") buzz([10, 30, 10]);
+  if (m.type === "kind" && aura) aura.set(m.kind);
   if (m.type === "thump") { buzz(35); thump(); }
   if (m.type === "clink") { const t = performance.now(); if (t - lastClinkT > 110) { lastClinkT = t; buzz(5); } clink(); }
 });
+// one page turn per second: after a turn, the next input is taken 1 s later (the gold bar shows the wait)
+const TURN_GAP = 1000;
+let turnReadyAt = 0, readyT = 0, bookPos = 0;
 function bookGo(dir) {
-  if (dir === "next" && bookPage >= bookN - 1) { closeBook(); return; }
+  const now = performance.now();
+  if (now < turnReadyAt) return false;
+  if (dir === "next" && bookPos >= bookN - 1) { closeBook(); return true; }
+  if (dir === "prev" && bookPos <= 0) return false;
+  bookPos += dir === "next" ? 1 : -1;
+  turnReadyAt = now + TURN_GAP;
   bookFrame?.contentWindow?.postMessage({ cmd: dir }, "*");
+  const bar = $("bkTimer");
+  bar.style.transition = "none"; bar.style.transform = "scaleX(1)"; void bar.offsetWidth;
+  bar.style.transition = `transform ${TURN_GAP}ms linear`; bar.style.transform = "scaleX(0)";
+  if (hands) gestChip("⏳", "Turning…");
+  clearTimeout(readyT); readyT = setTimeout(() => { if (phase === "book" && hands) gestChip("☝️", "Ready · move left: next · right: back", true); }, TURN_GAP);
+  return true;
 }
 // soothing music while reading, and small sounds: coins landing, the stamp
 let bookMusic = null, bookGain = null;
@@ -694,13 +712,14 @@ function openBook() {
     zoomTarget = zoom = 1; zoomBase = 1;
     bookObj.visible = true;
   }
+  bookPos = 0; turnReadyAt = 0;
   const begin = () => bookFrame.contentWindow.postMessage({ cmd: "go", i: 0, restart: true }, "*");
   if (bookReady) begin(); else { const iv = setInterval(() => { if (bookReady) { clearInterval(iv); begin(); } }, 100); }
   for (const id of ["controls", "sticky"]) $(id).classList.remove("show");
   $("controls").classList.add("hide"); $("bookBar").classList.remove("hide");
-  hint(null); pill("☝️ Point your finger and move it right for the next page", true);
+  hint(null); pill("☝️ Point your finger and move it left for the next page", true);
   setTimeout(() => { if (phase === "book") hidePill(); }, 6000);
-  if (hands) gestChip("☝️", "Point and move right: next page · left: back");
+  if (hands) gestChip("☝️", "Point and move left: next page · right: back");
   startBookMusic();
   buzz([20, 40, 20]);
 }
@@ -708,6 +727,7 @@ function closeBook() {
   stopBookMusic();
   $("bookBar").classList.add("hide"); $("gest").classList.add("hide"); hint(null); hidePill();
   if (bookObj) { bookObj.visible = false; cssR.render(cssScene, cam); }
+  if (aura) { aura.set(null); aura.group.visible = false; }
   $("bookFlat").classList.remove("show");
   hctx.clearRect(0, 0, handCanvas.width, handCanvas.height); ring = 0;
   phase = bookFrom === "end" ? "end" : bookFrom;
@@ -753,8 +773,9 @@ function updateScreen() {
     screenPos.lerp(screenDir.clone().multiplyScalar(screenD), 0.22);
     faceCamera(screenPos, screenQ);
     const pm = mindar.camera.projectionMatrix.elements, d = screenPos.length() || 1;
-    const fit = Math.min(0.8 * (2 * d / pm[5]) / 1152, 0.92 * (2 * d / pm[0]) / 768);
+    const fit = Math.min(0.72 * (2 * d / pm[5]) / 1152, 0.84 * (2 * d / pm[0]) / 768);   // leaves room around the page for its animation
     bookObj.position.copy(screenPos); bookObj.quaternion.copy(screenQ); bookObj.scale.setScalar(fit * zoom);
+    if (aura) { aura.group.visible = true; aura.group.position.copy(screenPos); aura.group.quaternion.copy(screenQ); aura.group.scale.setScalar(fit * zoom); aura.update(fit * zoom); }
     return;
   }
   if (phase !== "play") return;
@@ -800,7 +821,7 @@ let zoomMode = false, ring = 0, ringPalm = null;
 function chipFor(pose) {
   if (zoomMode) return gestChip("🔍", pose === "pinch" ? `Resize · ${zoomTarget.toFixed(1)}× · open hand to confirm` : "Zoom mode · pinch, then spread or close", true);
   if (!pose) return gestChip("✋", "Show your hand to the camera");
-  const t = { pinky: ["🤙", "Pinky · skip to the end"], thumb: ["👍", "Thumbs up · hide / show info"], pinch: phase === "book" && !zoomMode ? ["☝️", "Move right: next page · left: back"] : ["🤏", "Pinch · double pinch to resize"], two: ["✌️", phase === "book" ? "Move right: next page · left: back" : "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
+  const t = { pinky: ["🤙", "Pinky · skip to the end"], thumb: ["👍", "Thumbs up · hide / show info"], pinch: phase === "book" && !zoomMode ? ["☝️", "Move left: next page · right: back"] : ["🤏", "Pinch · double pinch to resize"], two: ["✌️", phase === "book" ? "Move left: next page · right: back" : "Two fingers · pause / play"], fist: ["✊", "Grabbed · move to drag"], open: ["🖐", immersive ? "Hold to go back to AR" : "Hold to fill the ring · full view"], none: ["✋", "Hand found"] }[pose];
   gestChip(t[0], t[1], pose !== "none");
 }
 let lastPose = null;
@@ -831,7 +852,7 @@ const gestures = new Gestures({
     film.currentTime = Math.max(0, film.duration - 1.2); film.play().catch(() => {});
     toast("⏭  Skipped to the end"); buzz([20, 30, 20]);
   },
-  swipe: (dir) => { if (phase !== "book" || zoomMode) return; bookGo(dir === "right" ? "next" : "prev"); toast(dir === "right" ? "Next page ›" : "‹ Back"); },
+  swipe: (dir) => { if (phase !== "book" || zoomMode) return; const go = dir === "left" ? "next" : "prev"; if (bookGo(go)) toast(go === "next" ? "Next page ›" : "‹ Back"); },
   toggle: () => { if (phase === "book") return; if (film.paused) film.play().catch(() => {}); else film.pause(); toast(film.paused ? "❚❚  Paused" : "▶  Playing"); buzz([20, 40, 20]); },
   dragStart: () => { dragDir0 = screenDir.clone(); buzz(15); },
   drag: (dx, dy) => {

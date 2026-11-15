@@ -3,7 +3,7 @@
 //
 // Each gesture has its own hand shape, so they do not overlap:
 //   ✌  two fingers (index + middle) ............ pause / play
-//   ☝  point with the index finger (or ✌) and move it right / left ... next / previous page (AR book)
+//   ☝  point with the index finger (or ✌) and move it left / right ... next / previous page (AR book)
 //   👌 double pinch (thumb + index, twice) ...... enter zoom mode
 //        in zoom mode: spread / close the pinch .. resize
 //        open hand ............................... confirm the size, leave zoom mode
@@ -19,6 +19,7 @@ export const THUMB_HOLD = 0.4;   // seconds a thumbs up must be held to hide / s
 export const PINKY_HOLD = 0.5;   // seconds the pinky must be shown to skip the film
 export const SWIPE = 0.10;       // how far (fraction of the camera image) the fingertip moves to count as a swipe
 export const SWIPE_TIME = 0.7;   // … within this many seconds
+export const SWIPE_GAP = 1.0;    // seconds to wait after a swipe before the next one counts
 
 export function features(lm) {
   const s = dist(lm[0], lm[9]) || 1e-3;                        // hand size: wrist → middle knuckle
@@ -65,10 +66,11 @@ export class Gestures {
   // pointing (index alone, or index + middle) and moving sideways = a swipe.
   // Uses every frame's own hand shape, not the settled pose, so a fast move still counts.
   _swipe(lm, f, t) {
-    if (f.pose === "pinch" || f.pose === "two") this.trail.push([t, lm[8].x]);
-    else this.trail = [];
+    // a frame or two of another hand shape mid-swipe (blur) does not break it
+    if (f.pose === "pinch" || f.pose === "two") { this.trail.push([t, lm[8].x]); this.lastPoint = t; }
+    else if (t - (this.lastPoint ?? -9) > 0.3) this.trail = [];
     while (this.trail.length && t - this.trail[0][0] > SWIPE_TIME) this.trail.shift();
-    if (this.trail.length < 3 || t - this.lastSwipe < 0.9) return;
+    if (this.trail.length < 3 || t - this.lastSwipe < SWIPE_GAP) return;
     const x = this.trail[this.trail.length - 1][1];
     const lo = Math.min(...this.trail.map((p) => p[1])), hi = Math.max(...this.trail.map((p) => p[1]));
     let dir = null;
